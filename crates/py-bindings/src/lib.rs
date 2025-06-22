@@ -170,7 +170,7 @@ impl PyDetector {
 }
 
 #[pymodule]
-fn rusty_manga_mange_translator(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn rusty_manga_image_translator(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Session>()?;
     m.add_class::<PyDetector>()?;
     m.add_class::<PyImage>()?;

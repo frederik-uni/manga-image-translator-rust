@@ -8,6 +8,10 @@ members = [
     "crates/util",
 ]
 
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
 [workspace.dependencies]
 rayon = "1.10.0"
 image = "0.25.6"
@@ -19,7 +23,6 @@ interface = { path = "crates/interface" }
 util = { path = "crates/util" }
 opencv = { version = "0.94.4", default-features = false }
 fast_image_resize = "5.1.4"
-show-image = "0.13.0"
 tokio = "1.45.1"
 env_logger = "0.11.8"
 ort = { version = "2.0.0-rc.10" }
@@ -34,6 +37,7 @@ tar = "0.4.44"
 sha2 = "0.10.9"
 ndarray-npy = "0.9.1"
 ndarray-linalg = { version = "0.17.0" }
+show-image = "0.13"
 
 [patch.crates-io]
 clipper2c-sys = { git = "https://github.com/tirithen/clipper2c-sys" }

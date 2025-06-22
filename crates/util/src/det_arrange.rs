@@ -63,7 +63,6 @@ pub fn rearrange_patches(input: Array4<u8>, p_num: usize, transpose: bool) -> Ar
                 let patch = input.slice(s![p * pw_num + w, .., .., ..]);
                 let mut out_slice = output.slice_mut(s![p, w * pw..(w + 1) * pw, .., ..]);
 
-                // Direct assignment with transposition to avoid creating intermediate array
                 for i in 0..ph {
                     for j in 0..pw {
                         for k in 0..c {
@@ -136,11 +135,9 @@ fn process_arrays(
     let mut mask_lst = Vec::with_capacity(batch_size);
 
     if pad_size > 0 {
-        // Pre-calculate padding values once
         let paddb = (db.shape()[3] as f32 / tgt_size as f32 * pad_size as f32).round() as usize;
         let padmsk = (mask.shape()[3] as f32 / tgt_size as f32 * pad_size as f32).round() as usize;
 
-        // Process in parallel with pre-calculated values
         let results: Vec<_> = db
             .outer_iter()
             .zip(mask.outer_iter())
@@ -164,7 +161,6 @@ fn process_arrays(
             mask_lst.push(m);
         }
     } else {
-        // No padding case - direct parallel processing
         let results: Vec<_> = db
             .outer_iter()
             .zip(mask.outer_iter())
@@ -191,7 +187,6 @@ pub fn extract_patch(img: &RawImage, t: usize, b: usize) -> RawImage {
     let start = t * row_size;
     let end = b * row_size;
 
-    // Pre-allocate vector with exact capacity to avoid reallocations
     let mut data = Vec::with_capacity(end - start);
     data.extend_from_slice(&img.data[start..end]);
 
@@ -242,11 +237,9 @@ pub fn det_rearrange_forward(
     let pad_num = p_num * pw_num as usize - ph_num as usize;
     let total_patches = ph_num as usize + pad_num;
 
-    // Pre-allocate vectors with known capacity
     let mut rel_step_list = Vec::with_capacity(total_patches);
     let mut patch_list = Vec::with_capacity(total_patches);
 
-    // Generate actual patches in parallel
     let patches_and_steps: Vec<_> = (0..ph_num)
         .into_par_iter()
         .map(|ii| {
@@ -263,7 +256,6 @@ pub fn det_rearrange_forward(
         patch_list.push(patch);
     }
 
-    // Create template once and reuse for padding
     if pad_num > 0 {
         let template = RawImage {
             data: vec![0; patch_list[0].data.len()],
@@ -272,7 +264,6 @@ pub fn det_rearrange_forward(
             channels: patch_list[0].channels,
         };
 
-        // Extend with padding patches and their relative steps
         for ii in ph_num..(ph_num + pad_num as u32) {
             let t = ii * ph_step;
             rel_step_list.push(t as f64 / h as f64);
@@ -289,16 +280,13 @@ pub fn det_rearrange_forward(
         processor,
     );
 
-    // Pre-allocate result vectors with estimated capacity
     let estimated_total_patches = batches.iter().map(|b| b.len()).sum();
     let mut db_lst = Vec::with_capacity(estimated_total_patches);
     let mut mask_lst = Vec::with_capacity(estimated_total_patches);
 
-    // Process batches in parallel where possible
     let batch_results: Vec<_> = batches
         .into_par_iter()
         .map(|batch| {
-            // Convert batch to Array4 more efficiently
             let batch_arrays: Vec<_> = batch.into_iter().map(|v| v.to_ndarray()).collect();
             let batch_array4 = vec_array3_to_array4(batch_arrays);
 

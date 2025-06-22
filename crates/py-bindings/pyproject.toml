@@ -1,5 +1,5 @@
 [tool.maturin]
-module-name = "rusty_manga_mange_translator"
+module-name = "rusty_manga_image_translator"
 features = ["pyo3/extension-module"]
 
 [build-system]
