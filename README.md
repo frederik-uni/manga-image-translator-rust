@@ -1,0 +1,59 @@
+## CPP Dependencies
+- opencv [opencv,llvm]
+- ort [onnxruntime]
+- clipper2 [clipper]
+
+https://github.com/twistedfall/opencv-rust/blob/master/INSTALL.md
+
+## Roadmap
+- [x] detectors
+  - [~] default
+  - [x] none
+  - [ ] ctd
+  - [ ] paddle
+  - [ ] dbconvnext
+  - [ ] craft
+  - [ ] python-module
+- [ ] ocr
+  - [ ] 32px
+  - [ ] 48px
+  - [ ] 48px_ctc
+  - [ ] mocr
+  - [ ] python-module
+- [ ] inpainter
+  - [ ] default
+  - [ ] lama_large
+  - [ ] lama_mpe
+  - [ ] sd
+  - [ ] none
+  - [ ] original
+  - [ ] python-module
+- [ ] colorizer
+  - [ ] none
+  - [ ] python-module
+  - [ ] mc2
+- [ ] renderer
+  - [ ] json/struct
+  - [ ] gimp
+  - [ ] python-module
+  - [ ] svg
+  - [ ] png
+- [ ] upscaler python integration
+- [ ] translator python integration
+  - [ ] chatgpt api
+  - [ ] claude api
+  - [ ] deepseek api
+- [ ] cleanup code
+- [ ] more tests(100% test coverage)
+- [ ] more benchmarks
+- [ ] cleanup code
+- [ ] replace clipper 2
+- [ ] opencv
+- [ ] ci
+  - [ ] cargo build
+  - [ ] cargo test
+  - [ ] cargo fmt
+  - [ ] cargo clippy
+  - [ ] cargo doc
+  - [ ] cargo tarpaulin
+  - [ ] pyo3 publish

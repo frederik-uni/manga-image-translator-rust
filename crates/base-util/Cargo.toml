@@ -1,0 +1,9 @@
+[package]
+name = "base-util"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ort.workspace = true
+ndarray.workspace = true
+anyhow.workspace = true

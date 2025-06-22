@@ -1,0 +1,17 @@
+[package]
+name = "none"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+log.workspace = true
+interface.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+criterion = "0.6.0"
+
+
+[[bench]]
+name = "onnx_bench"
+harness = false

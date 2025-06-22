@@ -1,0 +1,32 @@
+[package]
+name = "dbnet"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+opencv = { workspace = true, default-features = false, features = [
+    "imgproc",
+    "clang-runtime",
+] }
+interface.workspace = true
+log.workspace = true
+anyhow.workspace = true
+maplit.workspace = true
+util.workspace = true
+ort.workspace = true
+base-util.workspace = true
+ndarray-npy = "0.9.1"
+ndarray.workspace = true
+ordered-float = "5.0.0"
+show-image.workspace = true
+env_logger.workspace = true
+ndarray-linalg = { workspace = true, features = ["intel-mkl-static"] }
+
+
+[dev-dependencies]
+criterion = "0.6.0"
+
+
+[[bench]]
+name = "onnx_bench"
+harness = false

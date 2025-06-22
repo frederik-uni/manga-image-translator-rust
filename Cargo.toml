@@ -1,0 +1,40 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/base-util",
+    "crates/interface",
+    "crates/modules/*",
+    "crates/py-bindings",
+    "crates/util",
+]
+
+[workspace.dependencies]
+rayon = "1.10.0"
+image = "0.25.6"
+log = "0.4.27"
+maplit = "1.0.2"
+base-util = { path = "crates/base-util" }
+anyhow = "1.0.98"
+interface = { path = "crates/interface" }
+util = { path = "crates/util" }
+opencv = { version = "0.94.4", default-features = false }
+fast_image_resize = "5.1.4"
+show-image = "0.13.0"
+tokio = "1.45.1"
+env_logger = "0.11.8"
+ort = { version = "2.0.0-rc.10" }
+ndarray = "0.16.1"
+tiny-skia = "0.11.4"
+geo = "0.30.0"
+dbnet = { path = "crates/modules/dbnet" }
+ureq = "3.0.12"
+tempfile = "3.20.0"
+flate2 = "1.1.2"
+tar = "0.4.44"
+sha2 = "0.10.9"
+ndarray-npy = "0.9.1"
+ndarray-linalg = { version = "0.17.0" }
+
+[patch.crates-io]
+clipper2c-sys = { git = "https://github.com/tirithen/clipper2c-sys" }
+clipper2 = { git = "https://github.com/frederik-uni/clipper2", branch = "offset" }

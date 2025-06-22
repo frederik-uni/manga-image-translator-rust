@@ -1,0 +1,80 @@
+[package]
+name = "interface"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+base-util.workspace = true
+rayon.workspace = true
+image.workspace = true
+log.workspace = true
+anyhow.workspace = true
+opencv.workspace = true
+fast_image_resize = { workspace = true, features = ["rayon"] }
+show-image = { workspace = true, optional = true }
+ndarray.workspace = true
+tiny-skia = { workspace = true, optional = true }
+geo.workspace = true
+ureq = { workspace = true, features = [] }
+tempfile.workspace = true
+flate2.workspace = true
+tar.workspace = true
+sha2.workspace = true
+ndarray-linalg = { workspace = true, features = ["intel-mkl-static"] }
+
+
+[dev-dependencies]
+criterion = "0.6.0"
+env_logger = "0.11.8"
+approx = "0.5.1"
+
+[[bench]]
+name = "invert_bench"
+harness = false
+
+[[bench]]
+name = "remove_border_mask_bench"
+harness = false
+
+[[bench]]
+name = "resize_bench"
+harness = false
+
+[[bench]]
+name = "resize_mask_bench"
+harness = false
+
+[[bench]]
+name = "rotate_left_mask_bench"
+harness = false
+
+[[bench]]
+name = "border_bench"
+harness = false
+
+[[bench]]
+name = "border_center_bench"
+harness = false
+
+[[bench]]
+name = "rotate_bench"
+harness = false
+
+[[bench]]
+name = "gamma_correction_bench"
+harness = false
+
+[[bench]]
+name = "histogram_equalization_bench"
+harness = false
+
+[[bench]]
+name = "textlines_bench"
+harness = false
+
+[features]
+default = ["u16-dims", "debug"]
+
+u16-dims = []
+debug = ["dep:show-image", "dep:tiny-skia"]
+gpu = []
