@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use base_util::onnx::{dyn_to_2d, new_session};
+use base_util::onnx::new_session;
 use interface::{
     detectors::{Detector, Mask, textlines::Quadrilateral},
     image::{DimType, ImageOp, Interpolation, RawImage},
@@ -7,10 +7,14 @@ use interface::{
 };
 use log::debug;
 
-use ndarray::{Array, Array3, ArrayViewD, Axis, Dim, IxDynImpl, array};
+use ndarray::{Array2, Array3, Array4, ArrayViewD, Axis, array};
 use opencv::core::BORDER_DEFAULT;
 use ort::{session::Session, value::Tensor};
-use util::{dbnet::Batch, opencv::bilateral_filter};
+use util::{
+    dbnet::Batch,
+    det_arrange::{det_rearrange_forward, shoud_rearrange},
+    opencv::bilateral_filter,
+};
 
 use maplit::hashmap;
 
@@ -143,10 +147,30 @@ impl Default for DefaultOptions {
     }
 }
 
+fn det_batch_forward_default(
+    session: &mut Session,
+    batch: Array4<u8>,
+) -> (Array4<f32>, Array4<f32>) {
+    let batch = batch
+        .mapv(|x| x as f32 / 127.5 - 1.0)
+        .permuted_axes([0, 3, 1, 2]);
+    let tensor = Tensor::from_array(batch).unwrap();
+    let outputs = session.run(ort::inputs!["input" => tensor]).unwrap();
+    let db: ArrayViewD<f32> = outputs["db"].try_extract_array().unwrap();
+    let mask: ArrayViewD<f32> = outputs["mask"].try_extract_array().unwrap();
+    let db = db.mapv(|x| 1.0 / (1.0 + (-x).exp()));
+    (
+        db.into_dimensionality::<ndarray::Ix4>().unwrap(),
+        mask.into_dimensionality::<ndarray::Ix4>()
+            .unwrap()
+            .to_owned(),
+    )
+}
+
 impl Detector for DbNetDetector {
     fn infer(
         &mut self,
-        detect: RawImage,
+        img: RawImage,
         options: &[u8],
         img_processor: &Box<dyn ImageOp + Send + Sync>,
     ) -> anyhow::Result<(Vec<Quadrilateral>, Mask)> {
@@ -158,31 +182,42 @@ impl Detector for DbNetDetector {
             }
             Some(model) => model,
         };
-        let resized = util::imageproc::resize_aspect_ratio(
-            bilateral_filter(&detect.as_opencv_mat(), 17, 80.0, 80.0, BORDER_DEFAULT)?,
-            options.detect_size as i64,
-            Interpolation::Bilinear,
-            1.0,
-            img_processor,
-        );
-        let ratio_h = 1.0 / resized.ratio;
-        let ratio_w = ratio_h;
-        let shape = (resized.img.height, resized.img.width);
 
-        let array = resized
-            .img
-            .to_ndarray()
-            .mapv(|x| x as f32 / 127.5 - 1.0)
-            .permuted_axes([2, 0, 1])
-            .insert_axis(ndarray::Axis(0));
+        let (db, mask, shape, ratio_w, ratio_h, pad_w, pad_h) =
+            match shoud_rearrange(&img, options.detect_size as u32) {
+                true => {
+                    let v = |batch| det_batch_forward_default(session, batch);
+                    let shape = (img.height, img.width);
+                    let (db, mask) =
+                        det_rearrange_forward(img, options.detect_size as u32, 4, v, img_processor);
+                    (db, mask, shape, 1.0, 1.0, 0, 0)
+                }
+                false => {
+                    let resized = util::imageproc::resize_aspect_ratio(
+                        bilateral_filter(&img.as_opencv_mat(), 17, 80.0, 80.0, BORDER_DEFAULT)?,
+                        options.detect_size as i64,
+                        Interpolation::Bilinear,
+                        1.0,
+                        img_processor,
+                    );
+                    let ratio_h = 1.0 / resized.ratio;
+                    let ratio_w = ratio_h;
+                    let shape = (resized.img.height, resized.img.width);
+                    let img = resized.img.to_ndarray().insert_axis(ndarray::Axis(0));
+                    let (db, mask) = det_batch_forward_default(session, img);
+                    (
+                        db,
+                        mask,
+                        shape,
+                        ratio_w,
+                        ratio_h,
+                        resized.pad_w,
+                        resized.pad_h,
+                    )
+                }
+            };
 
-        let tensor = Tensor::from_array(array).unwrap();
-        let outputs = session.run(ort::inputs!["input" => tensor]).unwrap();
-        let db: ArrayViewD<f32> = outputs["db"].try_extract_array().unwrap();
-        let mask: ArrayViewD<f32> = outputs["mask"].try_extract_array().unwrap();
-        let db = db.mapv(|x| 1.0 / (1.0 + (-x).exp()));
-
-        let mask: Array<f32, Dim<IxDynImpl>> = mask
+        let mask: Array2<f32> = mask
             .index_axis(ndarray::Axis(0), 0)
             .index_axis(ndarray::Axis(0), 0)
             .to_owned();
@@ -196,7 +231,6 @@ impl Detector for DbNetDetector {
             max_candidates: 1000,
             unclip_ratio: options.unclip_ratio,
         };
-        let mask = dyn_to_2d(mask).unwrap();
 
         let (mut boxes, mut scores) = det.call(
             Batch { shape: vec![shape] },
@@ -236,14 +270,14 @@ impl Detector for DbNetDetector {
             mask_height,
             Interpolation::Bilinear,
         );
-        let new_mask_width = mask_width - resized.pad_w as usize;
-        let new_mask_height = mask_height - resized.pad_h as usize;
+        let new_mask_width = mask_width - pad_w as usize;
+        let new_mask_height = mask_height - pad_h as usize;
         let mut mask_resized = Mask {
             width: mask_width as DimType,
             height: mask_height as DimType,
             data: mask_resized,
         };
-        if resized.pad_h > 0 || resized.pad_w > 0 {
+        if pad_h > 0 || pad_w > 0 {
             mask_resized = img_processor.remove_border_mask(
                 mask_resized,
                 new_mask_width as DimType,
