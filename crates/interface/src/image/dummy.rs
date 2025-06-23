@@ -1,4 +1,7 @@
-use crate::{detectors::Mask, image::ImageOp};
+use crate::{
+    detectors::Mask,
+    image::{DimType, ImageOp},
+};
 
 #[derive(Default)]
 pub struct DummyImageProcessor;
@@ -112,16 +115,12 @@ impl ImageOp for DummyImageProcessor {
         }
     }
 
-    fn resize_mask(
-        &self,
-        _: Vec<u8>,
-        _: usize,
-        _: usize,
-        width: usize,
-        height: usize,
-        _: super::Interpolation,
-    ) -> Vec<u8> {
-        vec![0; width * height]
+    fn resize_mask(&self, _: Mask, width: usize, height: usize, _: super::Interpolation) -> Mask {
+        Mask {
+            width: width as DimType,
+            height: height as DimType,
+            data: vec![0; width * height],
+        }
     }
 
     fn remove_border_mask(
@@ -134,6 +133,15 @@ impl ImageOp for DummyImageProcessor {
             data: vec![0; width as usize * height as usize],
             width,
             height,
+        }
+    }
+
+    fn transpose(&self, image: super::RawImage) -> super::RawImage {
+        super::RawImage {
+            data: vec![0; image.width as usize * image.height as usize],
+            width: image.height,
+            height: image.width,
+            channels: image.channels,
         }
     }
 }

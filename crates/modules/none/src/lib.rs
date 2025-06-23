@@ -87,7 +87,8 @@ mod tests {
             Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
         data.load().expect("Failed to load data");
         data.detect(
-            &RawImage::new("./test.png").expect("Failed to load image"),
+            &RawImage::new("./imgs/232265329-6a560438-e887-4f7f-b6a1-a61b8648f781.border.png")
+                .expect("Failed to load image"),
             PreprocessorOptions::default(),
             &[],
             &cpu_image_processor,

@@ -198,29 +198,33 @@ pub fn extract_patch(img: &RawImage, t: usize, b: usize) -> RawImage {
     }
 }
 
-pub fn det_rearrange_forward(
-    img: RawImage,
-    tgt_size: u32,
-    max_batch_size: u8,
-    dbnet_batch_forward: fn(Array4<u8>) -> (Array4<f32>, Array4<f32>),
-    processor: &Box<dyn ImageOp + Send + Sync>,
-) -> Option<(Array4<f32>, Array4<f32>)> {
+pub fn shoud_rearrange(img: &RawImage, tgt_size: u32) -> bool {
     let (w, h) = (img.width, img.height);
 
-    let (transpose, w, h) = if h < w { (true, h, w) } else { (false, w, h) };
+    let (_, w, h) = if h < w { (true, h, w) } else { (false, w, h) };
     let asp_ratio = h as f64 / w as f64;
     let down_scale_ratio = h as f64 / tgt_size as f64;
 
-    if !(down_scale_ratio > 2.5 && asp_ratio > 3.0) {
-        return None;
-    }
+    down_scale_ratio > 2.5 && asp_ratio > 3.0
+}
+
+pub fn det_rearrange_forward(
+    mut img: RawImage,
+    tgt_size: u32,
+    max_batch_size: u8,
+    mut dbnet_batch_forward: impl FnMut(Array4<u8>) -> (Array4<f32>, Array4<f32>),
+    processor: &Box<dyn ImageOp + Send + Sync>,
+) -> (Array4<f32>, Array4<f32>) {
+    let (w, h) = (img.width, img.height);
+
+    let (transpose, w, h) = if h < w { (true, h, w) } else { (false, w, h) };
 
     info!(
         "Input image will be rearranged to square batches before fed into network. Rearranged batches will be saved to result/rearrange_%d.png"
     );
 
     if transpose {
-        todo!()
+        img = processor.transpose(img);
     }
 
     let pw_num = (f64::floor(2.0 * tgt_size as f64 / w as f64) as u32).max(2);
@@ -280,26 +284,22 @@ pub fn det_rearrange_forward(
         processor,
     );
 
-    let estimated_total_patches = batches.iter().map(|b| b.len()).sum();
-    let mut db_lst = Vec::with_capacity(estimated_total_patches);
-    let mut mask_lst = Vec::with_capacity(estimated_total_patches);
-
     let batch_results: Vec<_> = batches
         .into_par_iter()
         .map(|batch| {
             let batch_arrays: Vec<_> = batch.into_iter().map(|v| v.to_ndarray()).collect();
             let batch_array4 = vec_array3_to_array4(batch_arrays);
-
-            let (db, mask) = dbnet_batch_forward(batch_array4);
-            process_arrays(&db, &mask, tgt_size as usize, pad_size.unwrap())
+            batch_array4
         })
         .collect();
 
-    for (d, m) in batch_results {
-        db_lst.extend(d);
-        mask_lst.extend(m);
-    }
-
+    let (db_lst, mask_lst): (Vec<_>, Vec<_>) = batch_results
+        .into_iter()
+        .map(|v| dbnet_batch_forward(v))
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .flat_map(|(db, mask)| process_arrays(&db, &mask, tgt_size as usize, pad_size.unwrap()))
+        .unzip();
     let db = unrearrange(
         db_lst,
         transpose,
@@ -312,6 +312,7 @@ pub fn det_rearrange_forward(
         patch_size as usize,
         &rel_step_list,
     );
+
     let mask = unrearrange(
         mask_lst,
         transpose,
@@ -325,7 +326,7 @@ pub fn det_rearrange_forward(
         &rel_step_list,
     );
 
-    Some((db, mask))
+    (db, mask)
 }
 
 fn vec_array3_to_array4<T: Clone>(arrays: Vec<Array3<T>>) -> Array4<T> {
@@ -358,7 +359,7 @@ fn unrearrange(
     let num_patches = patch_lst.len() * pw_num - pad_num;
     for (ii, p) in patch_lst.into_iter().enumerate() {
         let p = if transpose {
-            p.permuted_axes([1, 0, 2])
+            p.permuted_axes([0, 2, 1])
         } else {
             p
         };
@@ -389,6 +390,11 @@ fn unrearrange(
             }
         }
     }
+    let tgtmap = if transpose {
+        tgtmap.permuted_axes([0, 2, 1])
+    } else {
+        tgtmap
+    };
     tgtmap.insert_axis(Axis(0))
 }
 
@@ -400,13 +406,29 @@ mod tests {
     use crate::det_arrange::det_rearrange_forward;
 
     #[test]
-    fn find() {
+    fn find_vertical() {
         let img = RawImage::new("./imgs/01_1-optimized.png").unwrap();
         let cpu = Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
-        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking, &cpu).unwrap();
-        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2.npy").unwrap();
-        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2.npy").unwrap();
+        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking, &cpu);
+        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2_v.npy").unwrap();
+        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2_v.npy").unwrap();
         assert_eq!(db, ex_db);
+        assert_eq!(mask, ex_mask);
+    }
+
+    #[test]
+    fn find_horizontal() {
+        let img = RawImage::new("./imgs/01_1-optimized.png").unwrap();
+        let cpu = Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
+        let img = cpu.rotate_right(img);
+        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking2, &cpu);
+        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2_h.npy").unwrap();
+        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2_h.npy").unwrap();
+        assert_eq!(db.shape(), ex_db.shape());
+
+        assert_eq!(db, ex_db);
+        assert_eq!(mask.shape(), ex_mask.shape());
+
         assert_eq!(mask, ex_mask);
     }
 
@@ -415,8 +437,17 @@ mod tests {
         assert_eq!(input.shape(), input_ex.shape());
 
         assert_eq!(input, input_ex);
-        let db: Array4<f32> = ndarray_npy::read_npy("npys/db.npy").unwrap();
-        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask.npy").unwrap();
+        let db: Array4<f32> = ndarray_npy::read_npy("npys/db_v.npy").unwrap();
+        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask_v.npy").unwrap();
+        (db, mask)
+    }
+    fn mocking2(input: Array4<u8>) -> (Array4<f32>, Array4<f32>) {
+        let input_ex: Array4<u8> = ndarray_npy::read_npy("npys/input_h.npy").unwrap();
+        assert_eq!(input.shape(), input_ex.shape());
+
+        assert_eq!(input, input_ex);
+        let db: Array4<f32> = ndarray_npy::read_npy("npys/db_h.npy").unwrap();
+        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask_h.npy").unwrap();
         (db, mask)
     }
 }

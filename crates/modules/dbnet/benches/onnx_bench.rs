@@ -8,7 +8,8 @@ use interface::{
 
 fn criterion_benchmark(c: &mut Criterion) {
     let mut data = DbNetDetector::new(CreateData::all(), false);
-    let img = RawImage::new("./test.png").expect("Failed to load image");
+    let img = RawImage::new("./imgs/232264684-5a7bcf8e-707b-4925-86b0-4212382f1680.png")
+        .expect("Failed to load image");
     let cpu_image_processor =
         Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
 

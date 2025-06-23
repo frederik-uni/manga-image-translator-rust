@@ -23,7 +23,7 @@ ort = { workspace = true, features = [
     "coreml",
 ] }
 ndarray-linalg = { workspace = true, features = ["intel-mkl-static"] }
-rayon = "1.8"
+rayon = "1.10.0"
 
 [dev-dependencies]
 criterion = "0.6.0"

@@ -392,21 +392,12 @@ impl ImageOp for CpuImageProcessor {
 
     fn resize_mask(
         &self,
-        image: Vec<u8>,
-        old_width: usize,
-        old_height: usize,
+        image: Mask,
         width: usize,
         height: usize,
         interpolation: Interpolation,
-    ) -> Vec<u8> {
-        RayonImageProcessor::default().resize_mask(
-            image,
-            old_width,
-            old_height,
-            width,
-            height,
-            interpolation,
-        )
+    ) -> Mask {
+        RayonImageProcessor::default().resize_mask(image, width, height, interpolation)
     }
 
     fn remove_border_mask(&self, mask: Mask, width: DimType, height: DimType) -> Mask {
@@ -435,6 +426,31 @@ impl ImageOp for CpuImageProcessor {
             width: rotated.width,
             height: rotated.height,
             data: rotated.data,
+        }
+    }
+
+    fn transpose(&self, image: RawImage) -> RawImage {
+        let mut output = vec![0u8; image.data.len()];
+        unsafe {
+            let input_ptr = image.data.as_ptr();
+            let output_ptr = output.as_mut_ptr();
+
+            for y in 0..image.height as usize {
+                for x in 0..image.width as usize {
+                    let in_offset = (y * image.width as usize + x) * 3;
+                    let out_offset = (x * image.height as usize + y) * 3;
+
+                    *output_ptr.add(out_offset) = *input_ptr.add(in_offset);
+                    *output_ptr.add(out_offset + 1) = *input_ptr.add(in_offset + 1);
+                    *output_ptr.add(out_offset + 2) = *input_ptr.add(in_offset + 2);
+                }
+            }
+        }
+        RawImage {
+            data: output,
+            width: image.height,
+            height: image.width,
+            channels: 3,
         }
     }
 }

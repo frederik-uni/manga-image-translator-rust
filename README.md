@@ -13,11 +13,11 @@
 
 ## Roadmap
 - [x] detectors
-  - [~] default
+  - [x] dbnet
   - [x] none
   - [ ] ctd
   - [ ] paddle
-  - [ ] dbconvnext
+  - [x] dbnet_convnext
   - [ ] craft
   - [ ] python-module
 - [ ] ocr

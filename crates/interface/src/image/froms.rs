@@ -76,6 +76,30 @@ impl From<Array2<u8>> for RawImage {
     }
 }
 
+impl From<Array2<u8>> for Mask {
+    fn from(mask: Array2<u8>) -> Self {
+        let (height, width) = mask.dim();
+        let channels = 3;
+        let mut rgb = Array3::<u8>::zeros((height, width, channels));
+        for ((row, col), &val) in mask.indexed_iter() {
+            rgb[[row, col, 0]] = val;
+            rgb[[row, col, 1]] = val;
+            rgb[[row, col, 2]] = val;
+        }
+        let data = if rgb.is_standard_layout() {
+            rgb.as_slice().unwrap().to_vec()
+        } else {
+            rgb.into_iter().collect()
+        };
+
+        Mask {
+            data,
+            width: width as u16,
+            height: height as u16,
+        }
+    }
+}
+
 impl From<Array3<u8>> for RawImage {
     fn from(value: Array3<u8>) -> Self {
         let (height, width, channels) = value.dim();

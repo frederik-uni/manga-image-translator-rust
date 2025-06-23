@@ -435,13 +435,11 @@ impl ImageOp for RayonImageProcessor {
 
     fn resize_mask(
         &self,
-        image: Vec<u8>,
-        old_width: usize,
-        old_height: usize,
+        image: Mask,
         width: usize,
         height: usize,
         interpolation: Interpolation,
-    ) -> Vec<u8> {
+    ) -> Mask {
         let resize_alg = match interpolation {
             Interpolation::Nearest => ResizeAlg::Nearest,
             Interpolation::Box => ResizeAlg::Convolution(FilterType::Box),
@@ -451,9 +449,9 @@ impl ImageOp for RayonImageProcessor {
         };
         let mut resizer = Resizer::new();
         let src_image = Image::from_vec_u8(
-            old_width as u32,
-            old_height as u32,
-            image,
+            image.width as u32,
+            image.height as u32,
+            image.data,
             fast_image_resize::PixelType::U8,
         )
         .unwrap();
@@ -469,7 +467,11 @@ impl ImageOp for RayonImageProcessor {
                 Some(&ResizeOptions::new().use_alpha(false).resize_alg(resize_alg)),
             )
             .unwrap();
-        dst_image.into_vec()
+        Mask {
+            data: dst_image.into_vec(),
+            width: width as DimType,
+            height: height as DimType,
+        }
     }
     fn remove_border_mask(&self, mask: Mask, width: DimType, height: DimType) -> Mask {
         let mut cropped = vec![0u8; width as usize * height as usize];
@@ -501,6 +503,30 @@ impl ImageOp for RayonImageProcessor {
             width: rotated.width,
             height: rotated.height,
             data: rotated.data,
+        }
+    }
+
+    fn transpose(&self, image: RawImage) -> RawImage {
+        let mut output = vec![0u8; image.data.len()];
+
+        output
+            .par_chunks_mut(image.height as usize * 3) // each chunk corresponds to one output row
+            .enumerate()
+            .for_each(|(x, out_row)| {
+                for y in 0..image.height as usize {
+                    let in_offset = (y * image.width as usize + x) * 3;
+                    let out_offset = y * 3;
+
+                    out_row[out_offset..out_offset + 3]
+                        .copy_from_slice(&image.data[in_offset..in_offset + 3]);
+                }
+            });
+
+        RawImage {
+            data: output,
+            width: image.height,
+            height: image.width,
+            channels: 3,
         }
     }
 }

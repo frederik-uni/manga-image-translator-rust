@@ -11,13 +11,15 @@ fn main() {
     let cpu_image_processor =
         Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
     data.load().expect("Failed to load data");
-
-    let (_, _) = data
+    let mut img = RawImage::new("./imgs/01_1-optimized.png").expect("Failed to load image");
+    let (textlines, _) = data
         .detect(
-            &RawImage::new("./test.png").expect("Failed to load image"),
+            &img,
             PreprocessorOptions::default(),
             DefaultOptions::default().dump(),
             &cpu_image_processor,
         )
         .expect("failed to detect");
+    img.draw_bbox(&textlines);
+    img.to_image().save("output.png").unwrap();
 }

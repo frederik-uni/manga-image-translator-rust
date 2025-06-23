@@ -82,9 +82,12 @@ impl RawImage {
                 );
             }
         }
-
-        let png_bytes = pixmap.encode_png().unwrap();
-        std::fs::write("./img.png", png_bytes).unwrap();
+        self.data = pixmap
+            .data()
+            .chunks(4)
+            .flat_map(|v| &v[..3])
+            .cloned()
+            .collect()
     }
 
     pub fn display(&self) {
@@ -184,6 +187,7 @@ pub trait ImageOp {
     fn rotate_left_mask(&self, mask: Mask) -> Mask;
     fn gamma_correction(&self, image: RawImage) -> RawImage;
     fn histogram_equalization(&self, image: RawImage) -> RawImage;
+    fn transpose(&self, image: RawImage) -> RawImage;
     fn resize(
         &self,
         image: RawImage,
@@ -193,13 +197,11 @@ pub trait ImageOp {
     ) -> RawImage;
     fn resize_mask(
         &self,
-        image: Vec<u8>,
-        old_width: usize,
-        old_height: usize,
+        image: Mask,
         width: usize,
         height: usize,
         interpolation: Interpolation,
-    ) -> Vec<u8>;
+    ) -> Mask;
 
     fn remove_border_mask(&self, mask: Mask, width: DimType, height: DimType) -> Mask;
 }
