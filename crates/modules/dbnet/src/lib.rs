@@ -255,34 +255,15 @@ impl Detector for DbNetDetector {
             .filter(|v| v.area() >= 16.0)
             .collect::<Vec<_>>();
 
-        let mask_shape = mask.shape();
-        let mask_width = mask_shape[1] * 2;
-        let mask_height = mask_shape[0] * 2;
-        let mask = mask
-            .mapv(|v| f32::clamp(v * 255.0, 0.0, 255.0) as u8)
-            .into_iter()
-            .collect::<Vec<u8>>();
-        let mask_resized = img_processor.resize_mask(
-            mask,
-            mask_shape[1],
-            mask_shape[0],
-            mask_width,
-            mask_height,
-            Interpolation::Bilinear,
-        );
-        let new_mask_width = mask_width - pad_w as usize;
-        let new_mask_height = mask_height - pad_h as usize;
-        let mut mask_resized = Mask {
-            width: mask_width as DimType,
-            height: mask_height as DimType,
-            data: mask_resized,
-        };
+        let mask = Mask::from(mask.mapv(|v| f32::clamp(v * 255.0, 0.0, 255.0) as u8));
+        let t_w = mask.width as usize * 2;
+        let t_h = mask.height as usize * 2;
+        let mut mask_resized = img_processor.resize_mask(mask, t_w, t_h, Interpolation::Bilinear);
+        let new_mask_width = mask_resized.width - pad_w as DimType;
+        let new_mask_height = mask_resized.height - pad_h as DimType;
         if pad_h > 0 || pad_w > 0 {
-            mask_resized = img_processor.remove_border_mask(
-                mask_resized,
-                new_mask_width as DimType,
-                new_mask_height as DimType,
-            );
+            mask_resized =
+                img_processor.remove_border_mask(mask_resized, new_mask_width, new_mask_height);
         }
 
         Ok((quadrilateral, mask_resized))

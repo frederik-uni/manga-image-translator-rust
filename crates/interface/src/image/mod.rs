@@ -84,7 +84,7 @@ impl RawImage {
         }
 
         let png_bytes = pixmap.encode_png().unwrap();
-        std::fs::write("./img.png", png_bytes).unwrap();
+        self.data = png_bytes;
     }
 
     pub fn display(&self) {
@@ -193,13 +193,11 @@ pub trait ImageOp {
     ) -> RawImage;
     fn resize_mask(
         &self,
-        image: Vec<u8>,
-        old_width: usize,
-        old_height: usize,
+        image: Mask,
         width: usize,
         height: usize,
         interpolation: Interpolation,
-    ) -> Vec<u8>;
+    ) -> Mask;
 
     fn remove_border_mask(&self, mask: Mask, width: DimType, height: DimType) -> Mask;
 }

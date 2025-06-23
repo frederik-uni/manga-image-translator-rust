@@ -392,21 +392,12 @@ impl ImageOp for CpuImageProcessor {
 
     fn resize_mask(
         &self,
-        image: Vec<u8>,
-        old_width: usize,
-        old_height: usize,
+        image: Mask,
         width: usize,
         height: usize,
         interpolation: Interpolation,
-    ) -> Vec<u8> {
-        RayonImageProcessor::default().resize_mask(
-            image,
-            old_width,
-            old_height,
-            width,
-            height,
-            interpolation,
-        )
+    ) -> Mask {
+        RayonImageProcessor::default().resize_mask(image, width, height, interpolation)
     }
 
     fn remove_border_mask(&self, mask: Mask, width: DimType, height: DimType) -> Mask {

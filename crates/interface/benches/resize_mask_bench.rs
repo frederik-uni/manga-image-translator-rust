@@ -6,9 +6,7 @@ use interface::{
 
 fn bench_resize_cpu(processor: &mut CpuImageProcessor, image: &Mask, interpolation: Interpolation) {
     processor.resize_mask(
-        image.data.clone(),
-        image.width as usize,
-        image.height as usize,
+        image.clone(),
         image.width as usize * 2,
         image.height as usize * 2,
         interpolation,
@@ -21,9 +19,7 @@ fn bench_resize_rayon(
     interpolation: Interpolation,
 ) {
     processor.resize_mask(
-        image.data.clone(),
-        image.width as usize,
-        image.height as usize,
+        image.clone(),
         image.width as usize * 2,
         image.height as usize * 2,
         interpolation,
