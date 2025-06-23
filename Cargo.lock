@@ -208,7 +208,7 @@ dependencies = [
 
 [[package]]
 name = "base-util"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "ndarray",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "craft"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "crc32fast"
@@ -785,7 +785,7 @@ dependencies = [
 
 [[package]]
 name = "ctd"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "cty"
@@ -876,7 +876,7 @@ dependencies = [
 
 [[package]]
 name = "dbnet"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "base-util",
@@ -1923,7 +1923,7 @@ dependencies = [
 
 [[package]]
 name = "interface"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "approx",
@@ -2514,7 +2514,7 @@ dependencies = [
 
 [[package]]
 name = "none"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "criterion",
@@ -2833,7 +2833,7 @@ dependencies = [
 
 [[package]]
 name = "paddle"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "parking_lot"
@@ -3162,7 +3162,7 @@ dependencies = [
 
 [[package]]
 name = "python-module"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "interface",
@@ -3503,7 +3503,7 @@ checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
 name = "rusty-manga-image-translator"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base-util",
  "dbnet",
@@ -4261,7 +4261,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "util"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clipper2",
