@@ -7,11 +7,11 @@ https://github.com/twistedfall/opencv-rust/blob/master/INSTALL.md
 
 ## Roadmap
 - [x] detectors
-  - [~] default
+  - [x] dbnet
   - [x] none
   - [ ] ctd
   - [ ] paddle
-  - [ ] dbconvnext
+  - [x] dbnet_convnext
   - [ ] craft
   - [ ] python-module
 - [ ] ocr

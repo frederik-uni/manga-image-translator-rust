@@ -82,7 +82,12 @@ impl RawImage {
                 );
             }
         }
-        self.data = pixmap.data().to_vec();
+        self.data = pixmap
+            .data()
+            .chunks(4)
+            .flat_map(|v| &v[..3])
+            .cloned()
+            .collect()
     }
 
     pub fn display(&self) {
