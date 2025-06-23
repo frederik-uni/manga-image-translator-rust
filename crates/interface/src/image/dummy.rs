@@ -135,4 +135,13 @@ impl ImageOp for DummyImageProcessor {
             height,
         }
     }
+
+    fn transpose(&self, image: super::RawImage) -> super::RawImage {
+        super::RawImage {
+            data: vec![0; image.width as usize * image.height as usize],
+            width: image.height,
+            height: image.width,
+            channels: image.channels,
+        }
+    }
 }

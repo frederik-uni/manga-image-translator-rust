@@ -187,6 +187,7 @@ pub trait ImageOp {
     fn rotate_left_mask(&self, mask: Mask) -> Mask;
     fn gamma_correction(&self, image: RawImage) -> RawImage;
     fn histogram_equalization(&self, image: RawImage) -> RawImage;
+    fn transpose(&self, image: RawImage) -> RawImage;
     fn resize(
         &self,
         image: RawImage,

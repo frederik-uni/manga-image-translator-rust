@@ -209,7 +209,7 @@ pub fn shoud_rearrange(img: &RawImage, tgt_size: u32) -> bool {
 }
 
 pub fn det_rearrange_forward(
-    img: RawImage,
+    mut img: RawImage,
     tgt_size: u32,
     max_batch_size: u8,
     mut dbnet_batch_forward: impl FnMut(Array4<u8>) -> (Array4<f32>, Array4<f32>),
@@ -224,7 +224,7 @@ pub fn det_rearrange_forward(
     );
 
     if transpose {
-        todo!()
+        img = processor.transpose(img);
     }
 
     let pw_num = (f64::floor(2.0 * tgt_size as f64 / w as f64) as u32).max(2);
@@ -300,7 +300,6 @@ pub fn det_rearrange_forward(
         .into_par_iter()
         .flat_map(|(db, mask)| process_arrays(&db, &mask, tgt_size as usize, pad_size.unwrap()))
         .unzip();
-
     let db = unrearrange(
         db_lst,
         transpose,
@@ -313,6 +312,7 @@ pub fn det_rearrange_forward(
         patch_size as usize,
         &rel_step_list,
     );
+
     let mask = unrearrange(
         mask_lst,
         transpose,
@@ -359,7 +359,7 @@ fn unrearrange(
     let num_patches = patch_lst.len() * pw_num - pad_num;
     for (ii, p) in patch_lst.into_iter().enumerate() {
         let p = if transpose {
-            p.permuted_axes([1, 0, 2])
+            p.permuted_axes([0, 2, 1])
         } else {
             p
         };
@@ -390,6 +390,11 @@ fn unrearrange(
             }
         }
     }
+    let tgtmap = if transpose {
+        tgtmap.permuted_axes([0, 2, 1])
+    } else {
+        tgtmap
+    };
     tgtmap.insert_axis(Axis(0))
 }
 
@@ -401,13 +406,29 @@ mod tests {
     use crate::det_arrange::det_rearrange_forward;
 
     #[test]
-    fn find() {
+    fn find_vertical() {
         let img = RawImage::new("./imgs/01_1-optimized.png").unwrap();
         let cpu = Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
         let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking, &cpu);
-        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2.npy").unwrap();
-        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2.npy").unwrap();
+        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2_v.npy").unwrap();
+        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2_v.npy").unwrap();
         assert_eq!(db, ex_db);
+        assert_eq!(mask, ex_mask);
+    }
+
+    #[test]
+    fn find_horizontal() {
+        let img = RawImage::new("./imgs/01_1-optimized.png").unwrap();
+        let cpu = Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
+        let img = cpu.rotate_right(img);
+        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking2, &cpu);
+        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2_h.npy").unwrap();
+        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2_h.npy").unwrap();
+        assert_eq!(db.shape(), ex_db.shape());
+
+        assert_eq!(db, ex_db);
+        assert_eq!(mask.shape(), ex_mask.shape());
+
         assert_eq!(mask, ex_mask);
     }
 
@@ -416,8 +437,17 @@ mod tests {
         assert_eq!(input.shape(), input_ex.shape());
 
         assert_eq!(input, input_ex);
-        let db: Array4<f32> = ndarray_npy::read_npy("npys/db.npy").unwrap();
-        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask.npy").unwrap();
+        let db: Array4<f32> = ndarray_npy::read_npy("npys/db_v.npy").unwrap();
+        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask_v.npy").unwrap();
+        (db, mask)
+    }
+    fn mocking2(input: Array4<u8>) -> (Array4<f32>, Array4<f32>) {
+        let input_ex: Array4<u8> = ndarray_npy::read_npy("npys/input_h.npy").unwrap();
+        assert_eq!(input.shape(), input_ex.shape());
+
+        assert_eq!(input, input_ex);
+        let db: Array4<f32> = ndarray_npy::read_npy("npys/db_h.npy").unwrap();
+        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask_h.npy").unwrap();
         (db, mask)
     }
 }

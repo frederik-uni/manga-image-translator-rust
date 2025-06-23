@@ -505,4 +505,28 @@ impl ImageOp for RayonImageProcessor {
             data: rotated.data,
         }
     }
+
+    fn transpose(&self, image: RawImage) -> RawImage {
+        let mut output = vec![0u8; image.data.len()];
+
+        output
+            .par_chunks_mut(image.height as usize * 3) // each chunk corresponds to one output row
+            .enumerate()
+            .for_each(|(x, out_row)| {
+                for y in 0..image.height as usize {
+                    let in_offset = (y * image.width as usize + x) * 3;
+                    let out_offset = y * 3;
+
+                    out_row[out_offset..out_offset + 3]
+                        .copy_from_slice(&image.data[in_offset..in_offset + 3]);
+                }
+            });
+
+        RawImage {
+            data: output,
+            width: image.height,
+            height: image.width,
+            channels: 3,
+        }
+    }
 }
