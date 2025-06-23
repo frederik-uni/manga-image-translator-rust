@@ -1,15 +1,15 @@
 use std::{
     fs::File,
-    io::{BufReader, Read as _, Seek as _},
+    io::{BufReader, Read, Seek as _},
     path::{Path, PathBuf},
 };
 
 use base_util::project::root_path;
 use flate2::read::GzDecoder;
+use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
 use sha2::{Digest, Sha256};
 use tar::Archive;
-use tempfile::tempfile;
 
 pub struct ModelDb {}
 
@@ -66,9 +66,61 @@ fn failure<P: AsRef<Path>>(file_path: P, expected_hash: &str) -> bool {
 
 fn download_and_extract(url: &str, file_path: &Path) -> anyhow::Result<()> {
     info!("Downloading from: {}", url);
-    let response = ureq::get(url).call()?;
-    let mut temp_file = tempfile()?;
-    std::io::copy(&mut response.into_body().into_reader(), &mut temp_file)?;
+
+    let mut response = ureq::get(url).call()?;
+    let total_size = response
+        .headers()
+        .get("Content-Length")
+        .and_then(|val| val.to_str().ok())
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(0);
+
+    let pb = if total_size > 0 {
+        let pb = ProgressBar::new(total_size);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{msg} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+        pb.set_message("Downloading");
+        Some(pb)
+    } else {
+        None
+    };
+
+    struct ProgressReader<R> {
+        inner: R,
+        progress_bar: Option<ProgressBar>,
+        bytes_read: u64,
+    }
+
+    impl<R: Read> Read for ProgressReader<R> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            let n = self.inner.read(buf)?;
+            self.bytes_read += n as u64;
+            if let Some(pb) = &self.progress_bar {
+                pb.set_position(self.bytes_read);
+            }
+            Ok(n)
+        }
+    }
+
+    let mut temp_file = tempfile::tempfile()?;
+
+    let b = response.body_mut();
+    let b = b.as_reader();
+    let mut progress_reader = ProgressReader {
+        inner: b,
+        progress_bar: pb.clone(),
+        bytes_read: 0,
+    };
+
+    std::io::copy(&mut progress_reader, &mut temp_file)?;
+
+    if let Some(pb) = pb {
+        pb.finish_with_message("Download complete");
+    }
 
     if url.ends_with(".tar.gz") {
         debug!("Extracting archive...");

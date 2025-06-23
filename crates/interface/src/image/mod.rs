@@ -82,9 +82,7 @@ impl RawImage {
                 );
             }
         }
-
-        let png_bytes = pixmap.encode_png().unwrap();
-        self.data = png_bytes;
+        self.data = pixmap.data().to_vec();
     }
 
     pub fn display(&self) {

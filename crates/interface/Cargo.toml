@@ -21,6 +21,7 @@ flate2.workspace = true
 tar.workspace = true
 sha2.workspace = true
 ndarray-linalg = { workspace = true, features = ["intel-mkl-static"] }
+indicatif = "0.17"
 
 
 [dev-dependencies]

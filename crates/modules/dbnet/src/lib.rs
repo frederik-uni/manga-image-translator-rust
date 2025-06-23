@@ -40,8 +40,8 @@ impl Model for DbNetDetector {
     fn models(&self) -> std::collections::HashMap<&'static str, ModelSource> {
         hashmap! {
             "model"=> ModelSource {
-                url:"https://github.com/frederik-uni/manga-image-translator-rust/releases/download/detect-default-20241225.onnx",
-                hash:"7b348114b09015ce18373049c0ff90ce9a55fd3378cd33fd6209c80d1d04660e",
+                url: "https://github.com/frederik-uni/manga-image-translator-rust/releases/download/dbnet-v1.0.0/model.onnx",
+                hash: "7b348114b09015ce18373049c0ff90ce9a55fd3378cd33fd6209c80d1d04660e",
                 file: None,
                 archive: None
             }
