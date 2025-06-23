@@ -1,7 +1,7 @@
 [package]
-name = "py-bindings"
-version = "0.1.0"
-edition = "2024"
+name = "rusty-manga-image-translator"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 interface.workspace = true
@@ -11,5 +11,5 @@ dbnet.workspace = true
 base-util.workspace = true
 
 [lib]
-name = "rusty_manga_mange_translator"
+name = "rusty_manga_image_translator"
 crate-type = ["cdylib"]

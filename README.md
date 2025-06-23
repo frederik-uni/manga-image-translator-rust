@@ -1,9 +1,15 @@
-## CPP Dependencies
-- opencv [opencv,llvm]
+## External Dependencies
+- openssl
+- [opencv](https://github.com/twistedfall/opencv-rust/blob/master/INSTALL.md)
+- libfontconfig-dev(linux only)
+- ~~onnxruntime(prebuild binaries for arm64 & x86_64 availble)~~
+
+
+# CPP Dependencies
 - ort [onnxruntime]
 - clipper2 [clipper]
 
-https://github.com/twistedfall/opencv-rust/blob/master/INSTALL.md
+
 
 ## Roadmap
 - [x] detectors
@@ -48,12 +54,20 @@ https://github.com/twistedfall/opencv-rust/blob/master/INSTALL.md
 - [ ] more benchmarks
 - [ ] cleanup code
 - [ ] replace clipper 2
-- [ ] opencv
-- [ ] ci
-  - [ ] cargo build
-  - [ ] cargo test
-  - [ ] cargo fmt
+- [ ] replace opencv
+- [x] ci
+  - [x] cargo build
+  - [x] gh publish
+  - [x] cargo test
+  - [x] cargo fmt
   - [ ] cargo clippy
   - [ ] cargo doc
   - [ ] cargo tarpaulin
-  - [ ] pyo3 publish
+  - [x] pyo3 publish
+    - [x] macos arm64
+    - [x] macos x86_64
+    - [x] linux x86_64
+    - [x] linux arm64
+    - [~] windows x86_64
+    - [ ] windows arm64(no prebuild clang)
+    - [ ] ~~windows x64~~

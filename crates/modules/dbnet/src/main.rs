@@ -5,7 +5,6 @@ use interface::{
     model::{CreateData, Model as _},
 };
 
-#[show_image::main]
 fn main() {
     env_logger::init();
     let mut data = DbNetDetector::new(CreateData::all(), false);

@@ -1,7 +1,7 @@
 [package]
 name = "interface"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 base-util.workspace = true
@@ -9,7 +9,7 @@ rayon.workspace = true
 image.workspace = true
 log.workspace = true
 anyhow.workspace = true
-opencv.workspace = true
+opencv = { workspace = true }
 fast_image_resize = { workspace = true, features = ["rayon"] }
 show-image = { workspace = true, optional = true }
 ndarray.workspace = true
@@ -74,7 +74,7 @@ name = "textlines_bench"
 harness = false
 
 [features]
-default = ["u16-dims", "debug"]
+default = ["u16-dims"]
 
 u16-dims = []
 debug = ["dep:show-image", "dep:tiny-skia"]
