@@ -6,7 +6,7 @@ use ort::{
         CUDAExecutionProvider, CoreMLExecutionProvider, DirectMLExecutionProvider,
         TensorRTExecutionProvider,
     },
-    session::{Session, builder::GraphOptimizationLevel},
+    session::{builder::GraphOptimizationLevel, Session},
 };
 
 #[derive(Clone)]

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use base_util::onnx::{Providers, all_providers};
+use base_util::onnx::{all_providers, Providers};
 use dbnet::{DbNetDetector, DefaultOptions};
 use interface::{
     detectors::{Detector, PreprocessorOptions},

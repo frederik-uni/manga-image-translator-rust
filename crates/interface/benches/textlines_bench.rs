@@ -1,4 +1,4 @@
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 use interface::detectors::textlines::Quadrilateral;
 
 fn bench_create(points: Vec<(i64, i64)>, score: f64) {

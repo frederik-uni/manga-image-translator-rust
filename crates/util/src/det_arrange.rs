@@ -1,6 +1,6 @@
 use interface::image::{DimType, ImageOp, RawImage};
 use log::info;
-use ndarray::{Array, Array3, Array4, ArrayView3, Axis, Zip, s, stack};
+use ndarray::{s, stack, Array, Array3, Array4, ArrayView3, Axis, Zip};
 use rayon::prelude::*;
 
 fn square_pad_resize(

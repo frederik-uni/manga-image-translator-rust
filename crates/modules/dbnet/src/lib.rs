@@ -1,13 +1,13 @@
 use anyhow::anyhow;
 use base_util::onnx::new_session;
 use interface::{
-    detectors::{Detector, Mask, textlines::Quadrilateral},
+    detectors::{textlines::Quadrilateral, Detector, Mask},
     image::{DimType, ImageOp, Interpolation, RawImage},
     model::{CreateData, Model, ModelSource},
 };
 use log::debug;
 
-use ndarray::{Array2, Array3, Array4, ArrayViewD, Axis, array};
+use ndarray::{array, Array2, Array3, Array4, ArrayViewD, Axis};
 use opencv::core::BORDER_DEFAULT;
 use ort::{session::Session, value::Tensor};
 use util::{

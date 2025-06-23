@@ -91,7 +91,7 @@ impl RawImage {
     }
 
     pub fn display(&self) {
-        use show_image::{ImageView, create_window};
+        use show_image::{create_window, ImageView};
         let window = create_window("Image", Default::default()).unwrap();
 
         let image = ImageView::new(

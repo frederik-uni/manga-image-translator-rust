@@ -1,4 +1,4 @@
-use fast_image_resize::{FilterType, ResizeAlg, ResizeOptions, Resizer, images::Image};
+use fast_image_resize::{images::Image, FilterType, ResizeAlg, ResizeOptions, Resizer};
 
 use rayon::{
     iter::{

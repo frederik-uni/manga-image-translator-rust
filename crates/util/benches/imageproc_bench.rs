@@ -1,5 +1,5 @@
-use criterion::{Criterion, criterion_group, criterion_main};
-use interface::image::{Interpolation, RawImage, dummy::DummyImageProcessor};
+use criterion::{criterion_group, criterion_main, Criterion};
+use interface::image::{dummy::DummyImageProcessor, Interpolation, RawImage};
 use ndarray::Array2;
 use std::hint::black_box;
 use util::imageproc::{find_contours_from_ndarray, resize_aspect_ratio};

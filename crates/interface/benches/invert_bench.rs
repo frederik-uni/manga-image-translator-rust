@@ -1,4 +1,4 @@
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 use interface::image::{CpuImageProcessor, ImageOp as _, RawImage, RayonImageProcessor};
 
 fn bench_invert_cpu(processor: &mut CpuImageProcessor, image: &RawImage) -> RawImage {

@@ -1,7 +1,7 @@
 use interface::image::{DimType, ImageOp, Interpolation, RawImage};
 use ndarray::ArrayView2;
 use opencv::{
-    core::{CV_8UC1, Mat, MatTraitConst as _, Point, Vector},
+    core::{Mat, MatTraitConst as _, Point, Vector, CV_8UC1},
     imgproc::{self, CHAIN_APPROX_SIMPLE, RETR_LIST},
 };
 

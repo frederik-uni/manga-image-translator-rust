@@ -1,4 +1,4 @@
-use criterion::{Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 use interface::image::{
     CpuImageProcessor, ImageOp as _, Interpolation, RawImage, RayonImageProcessor,
 };

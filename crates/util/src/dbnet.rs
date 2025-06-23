@@ -1,8 +1,8 @@
 use clipper2::{ClipperOffset, ClipperOffsetConfig, Path};
 use clipper2c_sys::{ClipperEndType_POLYGON_END, ClipperJoinType_ROUND_JOIN};
-use ndarray::{Array1, Array2, Array3, Array4, ArrayView2, Axis, concatenate, s, stack};
+use ndarray::{concatenate, s, stack, Array1, Array2, Array3, Array4, ArrayView2, Axis};
 use opencv::{
-    core::{CV_8UC1, Mat, MatExprTraitConst as _, MatTraitConstManual, Point, Scalar, Vector},
+    core::{Mat, MatExprTraitConst as _, MatTraitConstManual, Point, Scalar, Vector, CV_8UC1},
     imgproc,
 };
 

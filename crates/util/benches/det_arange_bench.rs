@@ -1,5 +1,5 @@
-use criterion::{Criterion, criterion_group, criterion_main};
-use interface::image::{CpuImageProcessor, ImageOp, RawImage, dummy::DummyImageProcessor};
+use criterion::{criterion_group, criterion_main, Criterion};
+use interface::image::{dummy::DummyImageProcessor, CpuImageProcessor, ImageOp, RawImage};
 use ndarray::Array4;
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
