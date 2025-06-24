@@ -33,30 +33,30 @@ jobs:
 
       - name: Setup Linux
         if: matrix.platform.os == 'linux'
-        uses: ./.github/actions/setup-linux.yml
+        uses: ./.github/actions/setup-linux
 
       - name: Setup macOS
         if: matrix.platform.os == 'macos'
-        uses: ./.github/actions/setup-macos.yml
+        uses: ./.github/actions/setup-macos
 
       - name: Setup Windows
         if: matrix.platform.os == 'windows'
-        uses: ./.github/actions/setup-windows.yml
+        uses: ./.github/actions/setup-windows
 
       - name: Setup Rust
-        uses: ./.github/workflows/setup-rust.yml
+        uses: ./.github/workflows/setup-rust
 
       - name: Setup Python
-        uses: ./.github/workflows/setup-python.yml
+        uses: ./.github/workflows/setup-python
 
       - name: Tests & Building
-        uses: ./.github/workflows/cargo.yml
+        uses: ./.github/workflows/cargo
         with:
           test: true
           name: ${{ matrix.platform.name }}
 
       - name: Build wheels
-        uses: ./.github/workflows/python-build.yml
+        uses: ./.github/workflows/python-build
         with:
           interpreters: ${{ steps.setup-python.outputs.interpreters }}
           name: ${{ matrix.platform.name }}

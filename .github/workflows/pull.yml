@@ -28,28 +28,28 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Linux
-        if: matrix.platform.os == 'linux'
-        uses: ./.github/actions/setup-linux.yml
+        if: matrix.platform.runs-on == 'ubuntu-latest' || matrix.platform.runs-on == 'ubuntu-24.04-arm'
+        uses: ./.github/actions/setup-linux
         with:
           runs-on: ${{ matrix.platform.runs-on }}
 
       - name: Setup macOS
-        if: matrix.platform.os == 'macos'
-        uses: ./.github/actions/setup-macos.yml
+        if: matrix.platform.runs-on == 'macos-latest' || matrix.platform.runs-on == 'macos-13'
+        uses: ./.github/actions/setup-macos
         with:
           runs-on: ${{ matrix.platform.runs-on }}
 
       - name: Setup Windows
-        if: matrix.platform.os == 'windows'
-        uses: ./.github/actions/setup-windows.yml
+        if: matrix.platform.runs-on == 'windows-x86_64'
+        uses: ./.github/actions/setup-windows
         with:
           runs-on: ${{ matrix.platform.runs-on }}
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust.yml
+        uses: ./.github/actions/setup-rust
 
       - name: Tests & Building
-        uses: ./.github/actions/cargo.yml
+        uses: ./.github/actions/cargo
         with:
           test: true
           name: ${{ matrix.platform.name }}
