@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-interface = { workspace = true, features = ["debug"] }
+interface.workspace = true
 base-util.workspace = true
 paddle-ocr-rs = { git = "https://github.com/frederik-uni/paddle-ocr-rs.git", rev = "1a7eca018835402b7b51245f6f86ac0c69fbc319" }
 parking_lot.workspace = true
