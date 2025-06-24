@@ -1,5 +1,6 @@
 use std::{collections::HashMap, vec};
 
+use base_util::error::ModelLoadError;
 use interface::{
     detectors::{Detector, Mask},
     model::Model,
@@ -36,7 +37,7 @@ impl Model for NoneDetector {
         self.loaded = false;
     }
 
-    fn load(&mut self) -> anyhow::Result<()> {
+    fn load(&mut self) -> Result<(), ModelLoadError> {
         self.loaded = true;
         Ok(())
     }

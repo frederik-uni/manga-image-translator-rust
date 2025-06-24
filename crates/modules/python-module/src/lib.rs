@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use base_util::error::ModelLoadError;
 use interface::{detectors::Detector, model::Model};
 
 pub struct PythonDetector {}
@@ -25,7 +26,7 @@ impl Model for PythonDetector {
         todo!()
     }
 
-    fn load(&mut self) -> anyhow::Result<()> {
+    fn load(&mut self) -> Result<(), ModelLoadError> {
         todo!()
     }
 }

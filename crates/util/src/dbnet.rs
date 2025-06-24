@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+
+use base_util::error::PostProcessingError;
 use clipper2::{ClipperOffset, ClipperOffsetConfig, Path};
 use clipper2c_sys::{ClipperEndType_POLYGON_END, ClipperJoinType_ROUND_JOIN};
 use ndarray::{concatenate, s, stack, Array1, Array2, Array3, Array4, ArrayView2, Axis};
@@ -69,15 +72,14 @@ impl SegDetectorRepresenter {
         batch: Batch,
         pred: Array4<f32>,
         is_output_polygon: bool,
-    ) -> (Vec<Option<Array3<i64>>>, Vec<Option<Vec<f64>>>) {
+    ) -> Result<(Vec<Option<Array3<i64>>>, Vec<Option<Vec<f64>>>), PostProcessingError> {
         let pred: Array3<f32> = pred.slice(s![.., 0, .., ..]).to_owned();
         let segmentation: Array3<bool> = self.binarize(&pred);
         let batch_size = pred.shape()[0];
-        let (boxes_batch, scores_batch): (Vec<Option<Array3<i64>>>, Vec<Option<Vec<f64>>>) = batch
-            .shape[0..batch_size]
-            .iter()
-            .enumerate()
-            .map(|(batch_index, (height, width))| match is_output_polygon {
+        let (mut boxes_batch, mut scores_batch): (Vec<Option<Array3<i64>>>, Vec<Option<Vec<f64>>>) =
+            (vec![], vec![]);
+        for (batch_index, (height, width)) in batch.shape[0..batch_size].iter().enumerate() {
+            let (b, s) = match is_output_polygon {
                 true => self.polygons_from_bitmap(
                     pred.index_axis(Axis(0), batch_index),
                     segmentation.index_axis(Axis(0), batch_index),
@@ -89,11 +91,13 @@ impl SegDetectorRepresenter {
                     segmentation.index_axis(Axis(0), batch_index),
                     *width,
                     *height,
-                ),
-            })
-            .unzip();
+                )?,
+            };
+            boxes_batch.push(b);
+            scores_batch.push(s);
+        }
 
-        (boxes_batch, scores_batch)
+        Ok((boxes_batch, scores_batch))
     }
 
     fn polygons_from_bitmap(
@@ -106,17 +110,17 @@ impl SegDetectorRepresenter {
         unimplemented!()
     }
 
-    fn get_mini_boxes(contour: &Vector<Point>) -> (Vec<(f32, f32)>, f32) {
-        let box_ = opencv::imgproc::min_area_rect(&contour).unwrap();
+    fn get_mini_boxes(contour: &Vector<Point>) -> Result<(Vec<(f32, f32)>, f32), opencv::Error> {
+        let box_ = opencv::imgproc::min_area_rect(&contour)?;
         let mut points: Mat = Mat::default();
-        opencv::imgproc::box_points(box_, &mut points).unwrap();
+        opencv::imgproc::box_points(box_, &mut points)?;
 
-        let points: Vec<Vec<f32>> = points.to_vec_2d().unwrap();
+        let points: Vec<Vec<f32>> = points.to_vec_2d()?;
         let mut points_vec = points
             .into_iter()
             .map(|v| MyPoint::new(v[0], v[1]))
             .collect::<Vec<MyPoint>>();
-        points_vec.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap());
+        points_vec.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal));
 
         let (index_1, index_4) = if points_vec[1].y > points_vec[0].y {
             (0, 1)
@@ -141,10 +145,13 @@ impl SegDetectorRepresenter {
 
         let min_side = box_.size.width.min(box_.size.height);
 
-        (box_points, min_side)
+        Ok((box_points, min_side))
     }
 
-    pub fn box_score_fast(bitmap: ArrayView2<f32>, box_: &Vector<Point>) -> opencv::Result<f64> {
+    pub fn box_score_fast(
+        bitmap: ArrayView2<f32>,
+        box_: &Vector<Point>,
+    ) -> Result<f64, PostProcessingError> {
         let (h, w) = (bitmap.nrows() as i32, bitmap.ncols() as i32);
 
         let xs: Vec<i32> = box_.iter().map(|p| p.x).collect();
@@ -183,8 +190,8 @@ impl SegDetectorRepresenter {
 
         let mask_array = {
             let mask_bytes = mask.data_bytes()?;
-            ArrayView2::from_shape((height as usize, width as usize), mask_bytes).unwrap()
-        };
+            ArrayView2::from_shape((height as usize, width as usize), mask_bytes)
+        }?;
 
         let mut sum = 0.0f64;
         let mut count = 0usize;
@@ -204,26 +211,26 @@ impl SegDetectorRepresenter {
         bitmap: ArrayView2<bool>,
         dest_width: u16,
         dest_height: u16,
-    ) -> (Option<Array3<i64>>, Option<Vec<f64>>) {
+    ) -> Result<(Option<Array3<i64>>, Option<Vec<f64>>), PostProcessingError> {
         let [height, width] = bitmap.shape()[..] else {
             panic!("Expected 2 dimensions");
         };
 
         let contours = match crate::imageproc::find_contours_from_ndarray(&bitmap) {
             Ok(v) => v,
-            Err(_) => return (None, None),
+            Err(_) => return Ok((None, None)),
         };
         let num_contours = contours.len().min(self.max_candidates);
         let mut boxes: Array3<i64> = Array3::zeros((num_contours, 4, 2));
 
         let mut scores: Vec<f64> = vec![0.0; num_contours];
         for index in 0..num_contours {
-            let contour = contours.get(index).unwrap();
-            let (points, sside) = Self::get_mini_boxes(&contour);
+            let contour = contours.get(index)?;
+            let (points, sside) = Self::get_mini_boxes(&contour)?;
             if sside < self.min_size {
                 continue;
             }
-            let score = Self::box_score_fast(pred, &contour).unwrap();
+            let score = Self::box_score_fast(pred, &contour)?;
             if self.box_thresh > score {
                 continue;
             }
@@ -233,7 +240,7 @@ impl SegDetectorRepresenter {
                 .flatten()
                 .map(|(x, y)| Point::new(x as i32, y as i32));
 
-            let (box_, sside) = Self::get_mini_boxes(&Vector::from_iter(box_));
+            let (box_, sside) = Self::get_mini_boxes(&Vector::from_iter(box_))?;
             if sside < self.min_size + 2.0 {
                 continue;
             }
@@ -260,7 +267,7 @@ impl SegDetectorRepresenter {
                 .sum_axis(Axis(1))
                 .iter()
                 .enumerate()
-                .min_by(|a, b| a.1.partial_cmp(b.1).unwrap()) // Use `partial_cmp` for floats
+                .min_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(Ordering::Equal)) // Use `partial_cmp` for floats
                 .map(|(idx, _)| idx)
                 .unwrap();
             let box_ = roll_rows(&box_, 4 - startidx as isize);
@@ -270,7 +277,7 @@ impl SegDetectorRepresenter {
                 .assign(&box_.mapv(|x| x as i64));
         }
 
-        (Some(boxes), Some(scores))
+        Ok((Some(boxes), Some(scores)))
     }
 
     // default [1.8]

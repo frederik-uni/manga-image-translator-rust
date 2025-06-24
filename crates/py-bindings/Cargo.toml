@@ -9,6 +9,7 @@ pyo3 = { version = "0.25.1", features = ["extension-module"] }
 numpy = "0.25.0"
 dbnet.workspace = true
 base-util.workspace = true
+parking_lot = "0.12"
 
 [lib]
 name = "rusty_manga_image_translator"

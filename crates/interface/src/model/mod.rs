@@ -1,6 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
-use base_util::onnx::{all_providers, Providers};
+use base_util::{
+    error::ModelLoadError,
+    onnx::{all_providers, Providers},
+};
 
 use crate::models::ModelDb;
 
@@ -10,7 +13,7 @@ pub trait Model {
     fn models(&self) -> HashMap<&'static str, ModelSource>;
     fn loaded(&self) -> bool;
     fn unload(&mut self);
-    fn load(&mut self) -> anyhow::Result<()>;
+    fn load(&mut self) -> Result<(), ModelLoadError>;
 }
 
 #[derive(Clone)]

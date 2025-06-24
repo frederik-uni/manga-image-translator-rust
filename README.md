@@ -9,8 +9,6 @@
 - ort [onnxruntime]
 - clipper2 [clipper]
 
-
-
 ## Roadmap
 - [x] detectors
   - [x] dbnet
@@ -46,6 +44,7 @@
   - [ ] png
 - [ ] upscaler python integration
 - [ ] translator python integration
+  - [ ] google api
   - [ ] chatgpt api
   - [ ] claude api
   - [ ] deepseek api
@@ -53,7 +52,9 @@
 - [ ] more tests(100% test coverage)
 - [ ] more benchmarks
 - [ ] cleanup code
-- [ ] replace clipper 2
+- [ ] optimize code
+- [ ] error handling
+- [ ] replace clipper2
 - [ ] replace opencv
 - [x] ci
   - [x] cargo build

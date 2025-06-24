@@ -98,7 +98,7 @@ fn sort_pnts(pts: [(i64, i64); 4]) -> ([(i64, i64); 4], bool) {
     indices.sort_by(|&i, &j| {
         pairwise_vec_norm[i]
             .partial_cmp(&pairwise_vec_norm[j])
-            .unwrap()
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     let long_side_ids = [indices[8], indices[10]];

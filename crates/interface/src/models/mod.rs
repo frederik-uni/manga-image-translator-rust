@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use base_util::project::root_path;
+use base_util::{error::ModelLoadError, project::root_path};
 use flate2::read::GzDecoder;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
@@ -21,14 +21,15 @@ impl ModelDb {
         file: &str,
         url: &str,
         hash: &str,
-    ) -> Option<PathBuf> {
+    ) -> Result<PathBuf, ModelLoadError> {
         let file_path = root_path().join("models").join(kind).join(name).join(file);
-        std::fs::create_dir_all(file_path.parent().unwrap()).unwrap();
+        std::fs::create_dir_all(file_path.parent().expect("set above"))
+            .map_err(ModelLoadError::from)?;
         if !file_path.exists() {
-            download_and_extract(url, &file_path).unwrap();
+            download_and_extract(url, &file_path)?;
             if failure(&file_path, hash) {
                 let _ = std::fs::remove_file(&file_path);
-                download_and_extract(url, &file_path).unwrap();
+                download_and_extract(url, &file_path)?;
             }
             if failure(&file_path, hash) {
                 panic!()
@@ -36,13 +37,13 @@ impl ModelDb {
         } else {
             if failure(&file_path, hash) {
                 let _ = std::fs::remove_file(&file_path);
-                download_and_extract(url, &file_path).unwrap();
+                download_and_extract(url, &file_path)?;
             }
             if failure(&file_path, hash) {
                 panic!()
             }
         }
-        Some(file_path)
+        Ok(file_path)
     }
 }
 
@@ -65,10 +66,10 @@ fn failure<P: AsRef<Path>>(file_path: P, expected_hash: &str) -> bool {
     file_hash != expected_hash.to_lowercase()
 }
 
-fn download_and_extract(url: &str, file_path: &Path) -> anyhow::Result<()> {
+fn download_and_extract(url: &str, file_path: &Path) -> Result<(), ModelLoadError> {
     info!("Downloading from: {}", url);
 
-    let mut response = ureq::get(url).call()?;
+    let mut response = ureq::get(url).call().map_err(ModelLoadError::from)?;
     let total_size = response
         .headers()
         .get("Content-Length")
@@ -78,12 +79,12 @@ fn download_and_extract(url: &str, file_path: &Path) -> anyhow::Result<()> {
 
     let pb = if total_size > 0 {
         let pb = ProgressBar::new(total_size);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template("{msg} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                .unwrap()
-                .progress_chars("#>-"),
-        );
+        if let Ok(v) = ProgressStyle::default_bar()
+            .template("{msg} [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        {
+            pb.set_style(v.progress_chars("#>-"));
+        }
+
         pb.set_message("Downloading");
         Some(pb)
     } else {
@@ -132,9 +133,7 @@ fn download_and_extract(url: &str, file_path: &Path) -> anyhow::Result<()> {
         let decoder = GzDecoder::new(buf_reader);
         let mut archive = Archive::new(decoder);
 
-        let extract_dir = file_path.parent().ok_or(anyhow::anyhow!(
-            "Failed to determine parent directory of the provided path"
-        ))?;
+        let extract_dir = file_path.parent().expect("set parent dir");
 
         archive.unpack(extract_dir)?;
         debug!("Extraction complete.");
@@ -176,9 +175,9 @@ mod tests {
 
     #[test]
     fn test_failure_returns_false_for_correct_hash() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("couldnt create tempdir");
         let path = dir.path().join("test.txt");
-        fs::write(&path, "correct content").unwrap();
+        fs::write(&path, "correct content").expect("couldnt write temp file");
 
         let correct_hash = format!("{:x}", Sha256::digest(b"correct content"));
         assert!(!failure(&path, &correct_hash));

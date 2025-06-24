@@ -9,6 +9,8 @@ use ort::{
     session::{builder::GraphOptimizationLevel, Session},
 };
 
+use crate::error::ModelLoadError;
+
 #[derive(Clone)]
 pub enum Providers {
     TensorRT,
@@ -30,7 +32,7 @@ pub fn all_providers() -> Vec<Providers> {
     ]
 }
 
-pub fn new_session(path: PathBuf, providers: Vec<Providers>) -> anyhow::Result<Session> {
+pub fn new_session(path: PathBuf, providers: Vec<Providers>) -> Result<Session, ModelLoadError> {
     let providers = providers
         .into_iter()
         .map(|v| match v {

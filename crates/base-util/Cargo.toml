@@ -7,3 +7,6 @@ edition.workspace = true
 ort.workspace = true
 ndarray.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true
+opencv.workspace = true
+ureq.workspace = true

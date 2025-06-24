@@ -7,6 +7,7 @@ edition.workspace = true
 log.workspace = true
 interface.workspace = true
 anyhow.workspace = true
+base-util.workspace = true
 
 [dev-dependencies]
 criterion = "0.6.0"

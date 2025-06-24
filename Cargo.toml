@@ -38,6 +38,7 @@ sha2 = "0.10.9"
 ndarray-npy = "0.9.1"
 ndarray-linalg = { version = "0.17.0" }
 show-image = "0.13"
+thiserror = "2.0.12"
 
 [patch.crates-io]
 clipper2c-sys = { git = "https://github.com/tirithen/clipper2c-sys" }
