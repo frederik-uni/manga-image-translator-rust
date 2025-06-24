@@ -240,8 +240,21 @@ impl Detector for DbNetDetector {
             false,
         )?;
 
-        let boxes = boxes.remove(0).unwrap();
-        let scores = scores.remove(0).unwrap();
+        let boxes = boxes.remove(0);
+        let scores = scores.remove(0);
+        let (boxes, scores) = match (boxes, scores) {
+            (Some(b), Some(s)) => (b, s),
+            _ => {
+                return Ok((
+                    vec![],
+                    Mask {
+                        width: 0,
+                        height: 0,
+                        data: Vec::new(),
+                    },
+                ))
+            }
+        };
         let polys = filter_boxes_and_adjust(&boxes, ratio_w, ratio_h);
         let quadrilateral = polys
             .outer_iter()

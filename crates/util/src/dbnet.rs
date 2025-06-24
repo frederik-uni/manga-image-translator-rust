@@ -157,10 +157,26 @@ impl SegDetectorRepresenter {
         let xs: Vec<i32> = box_.iter().map(|p| p.x).collect();
         let ys: Vec<i32> = box_.iter().map(|p| p.y).collect();
 
-        let xmin = *xs.iter().min().unwrap().clamp(&0, &(w - 1));
-        let xmax = *xs.iter().max().unwrap().clamp(&0, &(w - 1));
-        let ymin = *ys.iter().min().unwrap().clamp(&0, &(h - 1));
-        let ymax = *ys.iter().max().unwrap().clamp(&0, &(h - 1));
+        let xmin = *xs
+            .iter()
+            .min()
+            .ok_or(PostProcessingError::Empty)?
+            .clamp(&0, &(w - 1));
+        let xmax = *xs
+            .iter()
+            .max()
+            .ok_or(PostProcessingError::Empty)?
+            .clamp(&0, &(w - 1));
+        let ymin = *ys
+            .iter()
+            .min()
+            .ok_or(PostProcessingError::Empty)?
+            .clamp(&0, &(h - 1));
+        let ymax = *ys
+            .iter()
+            .max()
+            .ok_or(PostProcessingError::Empty)?
+            .clamp(&0, &(h - 1));
 
         let width = xmax - xmin + 1;
         let height = ymax - ymin + 1;
@@ -269,7 +285,7 @@ impl SegDetectorRepresenter {
                 .enumerate()
                 .min_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(Ordering::Equal)) // Use `partial_cmp` for floats
                 .map(|(idx, _)| idx)
-                .unwrap();
+                .ok_or(PostProcessingError::Empty)?;
             let box_ = roll_rows(&box_, 4 - startidx as isize);
             scores[index] = score;
             boxes

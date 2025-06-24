@@ -1,4 +1,4 @@
-use base_util::error::{Error, PreProcessingError, ProcessingError};
+use base_util::error::{Error, PostProcessingError, PreProcessingError, ProcessingError};
 use interface::image::{DimType, ImageOp, RawImage};
 use log::info;
 use ndarray::{s, stack, Array, Array3, Array4, ArrayView3, Axis, Zip};
@@ -43,8 +43,11 @@ fn square_pad_resize(
     return (img, down_scale_ratio, pad_h, pad_w);
 }
 
-fn stack_vec_to_array4(vec: Vec<Array3<u8>>) -> Array4<u8> {
-    stack(Axis(0), &vec.iter().map(|a| a.view()).collect::<Vec<_>>()).unwrap()
+fn stack_vec_to_array4(vec: Vec<Array3<u8>>) -> Result<Array4<u8>, PreProcessingError> {
+    Ok(stack(
+        Axis(0),
+        &vec.iter().map(|a| a.view()).collect::<Vec<_>>(),
+    )?)
 }
 
 pub fn rearrange_patches(input: Array4<u8>, p_num: usize, transpose: bool) -> Array4<u8> {
@@ -101,7 +104,7 @@ fn patch2batches(
         .into_iter()
         .map(|v| v.to_ndarray())
         .collect::<Result<Vec<_>, _>>()?;
-    let path_lst = stack_vec_to_array4(path_lst);
+    let path_lst = stack_vec_to_array4(path_lst)?;
     let patch_lst = rearrange_patches(path_lst, p_num, transpose);
 
     let mut batches: Vec<Vec<_>> = vec![vec![]];
@@ -295,16 +298,21 @@ pub fn det_rearrange_forward(
                 .map(|v| v.to_ndarray().map_err(PreProcessingError::from))
                 .collect();
             let batch_array4 = vec_array3_to_array4(batch_arrays?);
-            Ok(batch_array4)
+            batch_array4
         })
         .collect();
+
+    let pad_size = match pad_size {
+        Some(v) => v,
+        None => Err(PreProcessingError::Empty)?,
+    };
 
     let (db_lst, mask_lst): (Vec<_>, Vec<_>) = batch_results?
         .into_iter()
         .map(|v| dbnet_batch_forward(v))
         .collect::<Result<Vec<_>, ProcessingError>>()?
         .into_par_iter()
-        .flat_map(|(db, mask)| process_arrays(&db, &mask, tgt_size as usize, pad_size.unwrap()))
+        .flat_map(|(db, mask)| process_arrays(&db, &mask, tgt_size as usize, pad_size))
         .unzip();
     let db = unrearrange(
         db_lst,
@@ -317,7 +325,7 @@ pub fn det_rearrange_forward(
         ph_step as usize,
         patch_size as usize,
         &rel_step_list,
-    );
+    )?;
 
     let mask = unrearrange(
         mask_lst,
@@ -330,18 +338,18 @@ pub fn det_rearrange_forward(
         ph_step as usize,
         patch_size as usize,
         &rel_step_list,
-    );
+    )?;
 
     Ok((db, mask))
 }
 
-fn vec_array3_to_array4<T: Clone>(arrays: Vec<Array3<T>>) -> Array4<T> {
+fn vec_array3_to_array4<T: Clone>(arrays: Vec<Array3<T>>) -> Result<Array4<T>, PreProcessingError> {
     if arrays.is_empty() {
-        panic!("Cannot create Array4 from empty vector")
+        Err(PreProcessingError::Empty)?
     }
 
     let views: Vec<_> = arrays.iter().map(|a| a.view()).collect();
-    stack(Axis(0), &views).unwrap()
+    Ok(stack(Axis(0), &views)?)
 }
 
 fn unrearrange(
@@ -355,8 +363,11 @@ fn unrearrange(
     ph_step: usize,
     patch_size: usize,
     rel_step_list: &Vec<f64>,
-) -> Array4<f32> {
-    let h = *patch_lst[0].shape().last().unwrap();
+) -> Result<Array4<f32>, PostProcessingError> {
+    let h = *patch_lst[0]
+        .shape()
+        .last()
+        .ok_or(PostProcessingError::Empty)?;
     let psize = h;
     let step = (ph_step as f64 * psize as f64 / patch_size as f64) as usize;
     let pw = (psize as f64 / pw_num as f64) as usize;
@@ -401,7 +412,7 @@ fn unrearrange(
     } else {
         tgtmap
     };
-    tgtmap.insert_axis(Axis(0))
+    Ok(tgtmap.insert_axis(Axis(0)))
 }
 
 #[cfg(test)]
