@@ -13,6 +13,7 @@ runs:
           3.13
 
     - name: Install maturin
+      shell: bash
       run: pip install maturin
 
     - name: Find Python interpreters

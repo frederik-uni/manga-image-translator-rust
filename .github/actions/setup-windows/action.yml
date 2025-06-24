@@ -11,6 +11,7 @@ runs:
   using: "composite"
   steps:
     - name: Install OpenCV (Windows)
+      shell: powershell
       run: choco install opencv
 
     - name: Find OpenCV library and set environment variables

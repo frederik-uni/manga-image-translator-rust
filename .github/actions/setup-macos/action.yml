@@ -9,9 +9,11 @@ runs:
   steps:
     - name: Optionally install OpenSSL
       if: ${{ runs-on == 'macos-13' }}
+      shell: bash
       run: brew install openssl@3
 
     - name: Install macOS dependencies
+      shell: bash
       run: |
         if [[ "${{ inputs.runs-on }}" == "macos-13" ]]; then
           brew install openssl@3

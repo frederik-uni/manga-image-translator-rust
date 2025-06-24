@@ -14,13 +14,16 @@ runs:
   steps:
     steps:
       - name: Check formatting
+        shell: bash
         run: cargo fmt --all -- --check
 
       - name: Run tests
         if: inputs.test && matrix.os == 'macos-latest'
+        shell: bash
         run: cargo test --verbose
 
       - name: Build release
+        shell: bash
         run: cargo build --release -p dbnet
 
       - name: Upload artifacts
