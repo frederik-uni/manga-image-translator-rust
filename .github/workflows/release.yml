@@ -44,7 +44,7 @@ jobs:
           runs-on: ${{ matrix.platform.runs-on }}
 
       - name: Setup Windows
-        if: matrix.platform.runs-on == 'windows-x86_64'
+        if: matrix.platform.runs-on == 'windows-latest'
         uses: ./.github/actions/setup-windows
         with:
           runs-on: ${{ matrix.platform.runs-on }}
