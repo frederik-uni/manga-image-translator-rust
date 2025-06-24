@@ -6,7 +6,10 @@ use ort::{
         CUDAExecutionProvider, CoreMLExecutionProvider, DirectMLExecutionProvider,
         TensorRTExecutionProvider,
     },
-    session::{builder::GraphOptimizationLevel, Session},
+    session::{
+        builder::{GraphOptimizationLevel, SessionBuilder},
+        Session,
+    },
 };
 
 use crate::error::ModelLoadError;
@@ -33,6 +36,13 @@ pub fn all_providers() -> Vec<Providers> {
 }
 
 pub fn new_session(path: PathBuf, providers: Vec<Providers>) -> Result<Session, ModelLoadError> {
+    Ok(new_session_(Session::builder()?, providers)?.commit_from_file(path)?)
+}
+
+pub fn new_session_(
+    session_builder: SessionBuilder,
+    providers: Vec<Providers>,
+) -> Result<SessionBuilder, ort::Error> {
     let providers = providers
         .into_iter()
         .map(|v| match v {
@@ -42,13 +52,12 @@ pub fn new_session(path: PathBuf, providers: Vec<Providers>) -> Result<Session, 
             Providers::CoreML => CoreMLExecutionProvider::default().build(),
         })
         .collect::<Vec<_>>();
-    Ok(Session::builder()?
+    Ok(session_builder
         .with_optimization_level(GraphOptimizationLevel::Level3)?
         .with_execution_providers(providers)?
         .with_parallel_execution(true)?
         .with_intra_threads(4)?
-        .with_inter_threads(2)?
-        .commit_from_file(path)?)
+        .with_inter_threads(2)?)
 }
 
 pub fn dyn_to_2d(arr: Array<f32, IxDyn>) -> Option<Array2<f32>> {

@@ -162,7 +162,7 @@ mod tests {
             .filter_level(log::LevelFilter::Debug)
             .try_init();
         assert_eq!(
-            failure(root_path().join("models/detector/default/model.onnx"), ""),
+            failure(root_path().join("models/detector/paddle/det.onnx"), ""),
             true
         );
     }

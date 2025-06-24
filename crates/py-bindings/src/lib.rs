@@ -1,16 +1,19 @@
 use std::sync::Arc;
 
 use base_util::onnx::{all_providers, Providers};
-use dbnet::{DbNetDetector, DefaultOptions};
+use base_util::RawSerializable;
+use dbnet::DbNetDetector;
+use interface::detectors::DefaultOptions;
 use interface::{
     detectors::{textlines::Quadrilateral, Detector, PreprocessorOptions},
     image::{CpuImageProcessor, ImageOp, RawImage},
-    model::{CreateData, Model as _},
+    model::CreateData,
 };
 use numpy::{
     ndarray::{Array2, Array3},
     IntoPyArray as _, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray3,
 };
+use paddle::PaddleDetector;
 use parking_lot::Mutex;
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
@@ -49,6 +52,16 @@ impl Session {
         PyDetector {
             inner: Arc::new(Mutex::new(
                 Box::new(DbNetDetector::new(self.inner.clone(), false))
+                    as Box<dyn Detector + Send + Sync>,
+            )),
+            processor: self.processor.clone(),
+        }
+    }
+
+    fn paddle_detector(&self) -> PyDetector {
+        PyDetector {
+            inner: Arc::new(Mutex::new(
+                Box::new(PaddleDetector::new(self.inner.clone()))
                     as Box<dyn Detector + Send + Sync>,
             )),
             processor: self.processor.clone(),

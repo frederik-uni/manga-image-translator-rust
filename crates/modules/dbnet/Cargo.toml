@@ -21,7 +21,6 @@ ordered-float = "5.0.0"
 env_logger.workspace = true
 ndarray-linalg = { workspace = true, features = ["intel-mkl-static"] }
 
-
 [dev-dependencies]
 criterion = "0.6.0"
 

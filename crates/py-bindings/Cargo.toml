@@ -10,7 +10,8 @@ numpy = "0.25.0"
 dbnet.workspace = true
 base-util.workspace = true
 parking_lot = "0.12"
-
+paddle.workspace = true
+none.workspace = true
 [lib]
 name = "rusty_manga_image_translator"
 crate-type = ["cdylib"]
