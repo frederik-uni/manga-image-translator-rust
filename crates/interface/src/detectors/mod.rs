@@ -2,6 +2,8 @@ mod common;
 pub mod modules;
 pub mod textlines;
 
+use base_util::RawSerializable;
+
 use crate::{
     detectors::textlines::Quadrilateral,
     image::{DimType, ImageOp, RawImage},
@@ -77,4 +79,45 @@ pub struct Mask {
     pub width: DimType,
     pub height: DimType,
     pub data: Vec<u8>,
+}
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct DefaultOptions {
+    /// Text detector used for creating a text mask from an image
+    /// TODO: guide
+    pub detect_size: u64,
+    /// How much to extend text skeleton to form bounding box
+    /// smaller values = smaller text skeleton.
+    /// to small = more false negatives/partial detections
+    /// larger values = bigger text skeleton detections .
+    /// to big =  more false positives/Multiple close text lines/words may be merged
+    /// Suggested values:
+    /// - `1.0 – 1.5`: Use for tight text layouts, well-separated characters or lines, high-resolution images.
+    /// - `1.5 – 2.0`: General-purpose setting. Provides a good balance between recall and precision.
+    /// - `2.0 – 2.5`: Use when text is thin, faint, or sparse—e.g., scanned documents or light fonts.
+    /// - `> 2.5`: Rarely needed. May cause nearby text instances to merge or overlap.
+    pub unclip_ratio: f64,
+    /// Threshold for text detection
+    /// smaller values = more detections + more false positives
+    /// larger values = fewer detections + more false negatives
+    /// allowed range is from 0.0 to 1.0
+    pub text_threshold: f64,
+    /// Threshold for bbox generation
+    /// to small = more false positives/ noise, background artifacts, or partial text.
+    /// to big = false negatives/ actual text that had slightly lower confidence is discarded.
+    /// allowed range is from 0.0 to 1.0
+    pub box_threshold: f64,
+}
+
+impl RawSerializable for DefaultOptions {}
+impl Default for DefaultOptions {
+    fn default() -> Self {
+        Self {
+            detect_size: 2048,
+            unclip_ratio: 2.3,
+            text_threshold: 0.5,
+            box_threshold: 0.7,
+        }
+    }
 }

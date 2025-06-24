@@ -41,6 +41,4 @@ impl CreateData {
 pub struct ModelSource {
     pub url: &'static str,
     pub hash: &'static str,
-    pub archive: Option<HashMap<&'static str, &'static str>>,
-    pub file: Option<&'static str>,
 }

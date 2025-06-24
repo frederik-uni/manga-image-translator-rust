@@ -4,3 +4,23 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+interface = { workspace = true, features = ["debug"] }
+base-util.workspace = true
+paddle-ocr-rs = { git = "https://github.com/frederik-uni/paddle-ocr-rs.git", rev = "1a7eca018835402b7b51245f6f86ac0c69fbc319" }
+parking_lot.workspace = true
+ort.workspace = true
+anyhow.workspace = true
+maplit.workspace = true
+geo.workspace = true
+
+[dev-dependencies]
+criterion = "0.6.0"
+rand.workspace = true
+
+[[bench]]
+name = "generate_mask_bench"
+harness = false
+
+[[bench]]
+name = "onnx_bench"
+harness = false

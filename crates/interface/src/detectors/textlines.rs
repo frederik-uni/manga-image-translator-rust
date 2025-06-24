@@ -8,7 +8,7 @@ pub struct Quadrilateral {
 }
 
 impl Quadrilateral {
-    pub fn pts(&self) -> &[(i64, i64)] {
+    pub fn pts(&self) -> &[(i64, i64); 4] {
         &self.pts
     }
     pub fn score(&self) -> f64 {
