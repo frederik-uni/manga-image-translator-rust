@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use interface::image::{DimType, ImageOp, Interpolation, RawImage};
 use ndarray::ArrayView2;
 use opencv::{
@@ -63,7 +65,13 @@ pub fn find_contours_from_ndarray(
     let scaled = bitmap.mapv(|v| if v { 255_u8 } else { 0_u8 });
 
     let (rows, _) = scaled.dim();
-    let mat = Mat::from_slice(scaled.as_slice().unwrap())?;
+
+    let scaled = match scaled.as_slice() {
+        Some(v) => Cow::Borrowed(v),
+        None => Cow::Owned(scaled.into_iter().collect()),
+    };
+
+    let mat = Mat::from_slice(scaled.as_ref())?;
     let mat = mat.reshape(CV_8UC1, rows as i32)?;
 
     let mut contours = Vector::<Vector<Point>>::new();
@@ -115,7 +123,7 @@ mod tests {
             [true, true, false, false],
         ];
 
-        let contours = find_contours_from_ndarray(&bitmap.view()).unwrap();
+        let contours = find_contours_from_ndarray(&bitmap.view()).expect("Failed to find contours");
 
         assert!(!contours.is_empty());
     }

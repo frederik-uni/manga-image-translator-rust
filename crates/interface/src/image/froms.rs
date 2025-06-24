@@ -15,15 +15,17 @@ impl From<Array3<f32>> for RawImage {
     }
 }
 
-impl From<Mat> for RawImage {
-    fn from(value: Mat) -> Self {
+impl TryFrom<Mat> for RawImage {
+    type Error = opencv::Error;
+
+    fn try_from(value: Mat) -> Result<Self, Self::Error> {
         let resized = if value.is_continuous() {
             value
         } else {
             value.clone()
         };
 
-        let size = resized.size().unwrap();
+        let size = resized.size()?;
         let rows = size.height as usize;
         let cols = size.width as usize;
         let channels = resized.channels() as usize;
@@ -31,12 +33,12 @@ impl From<Mat> for RawImage {
         let total_len = rows * cols * channels;
         let data: &[u8] = unsafe { std::slice::from_raw_parts(resized.data(), total_len) };
 
-        Self {
+        Ok(Self {
             data: data.to_vec(),
             width: cols as DimType,
             height: rows as DimType,
             channels: channels as u8,
-        }
+        })
     }
 }
 
@@ -61,11 +63,10 @@ impl From<Array2<u8>> for RawImage {
             rgb[[row, col, 1]] = val;
             rgb[[row, col, 2]] = val;
         }
-        let data = if rgb.is_standard_layout() {
-            rgb.as_slice().unwrap().to_vec()
-        } else {
-            rgb.into_iter().collect()
-        };
+        let data = rgb
+            .as_slice()
+            .map(|v| v.to_vec())
+            .unwrap_or_else(|| rgb.into_iter().collect());
 
         RawImage {
             data,
@@ -86,11 +87,10 @@ impl From<Array2<u8>> for Mask {
             rgb[[row, col, 1]] = val;
             rgb[[row, col, 2]] = val;
         }
-        let data = if rgb.is_standard_layout() {
-            rgb.as_slice().unwrap().to_vec()
-        } else {
-            rgb.into_iter().collect()
-        };
+        let data = rgb
+            .as_slice()
+            .map(|v| v.to_vec())
+            .unwrap_or_else(|| rgb.into_iter().collect());
 
         Mask {
             data,
@@ -104,11 +104,10 @@ impl From<Array3<u8>> for RawImage {
     fn from(value: Array3<u8>) -> Self {
         let (height, width, channels) = value.dim();
 
-        let data = if value.is_standard_layout() {
-            value.as_slice().unwrap().to_vec()
-        } else {
-            value.into_iter().collect()
-        };
+        let data = value
+            .as_slice()
+            .map(|v| v.to_vec())
+            .unwrap_or_else(|| value.into_iter().collect());
 
         RawImage {
             data,

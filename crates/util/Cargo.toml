@@ -24,6 +24,7 @@ ort = { workspace = true, features = [
 ] }
 ndarray-linalg = { workspace = true, features = ["intel-mkl-static"] }
 rayon = "1.10.0"
+base-util.workspace = true
 
 [dev-dependencies]
 criterion = "0.6.0"

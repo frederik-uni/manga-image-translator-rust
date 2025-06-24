@@ -1,3 +1,4 @@
+use base_util::error::{Error, PostProcessingError, PreProcessingError, ProcessingError};
 use interface::image::{DimType, ImageOp, RawImage};
 use log::info;
 use ndarray::{s, stack, Array, Array3, Array4, ArrayView3, Axis, Zip};
@@ -42,8 +43,11 @@ fn square_pad_resize(
     return (img, down_scale_ratio, pad_h, pad_w);
 }
 
-fn stack_vec_to_array4(vec: Vec<Array3<u8>>) -> Array4<u8> {
-    stack(Axis(0), &vec.iter().map(|a| a.view()).collect::<Vec<_>>()).unwrap()
+fn stack_vec_to_array4(vec: Vec<Array3<u8>>) -> Result<Array4<u8>, PreProcessingError> {
+    Ok(stack(
+        Axis(0),
+        &vec.iter().map(|a| a.view()).collect::<Vec<_>>(),
+    )?)
 }
 
 pub fn rearrange_patches(input: Array4<u8>, p_num: usize, transpose: bool) -> Array4<u8> {
@@ -95,12 +99,12 @@ fn patch2batches(
     max_batch_size: usize,
     tgt_size: u32,
     processor: &Box<dyn ImageOp + Send + Sync>,
-) -> (Vec<Vec<RawImage>>, Option<f64>, Option<isize>) {
+) -> Result<(Vec<Vec<RawImage>>, Option<f64>, Option<isize>), PreProcessingError> {
     let path_lst = patch_lst
         .into_iter()
         .map(|v| v.to_ndarray())
-        .collect::<Vec<_>>();
-    let path_lst = stack_vec_to_array4(path_lst);
+        .collect::<Result<Vec<_>, _>>()?;
+    let path_lst = stack_vec_to_array4(path_lst)?;
     let patch_lst = rearrange_patches(path_lst, p_num, transpose);
 
     let mut batches: Vec<Vec<_>> = vec![vec![]];
@@ -121,7 +125,7 @@ fn patch2batches(
         // if verbose:
         //     cv2.imwrite(f'result/rearrange_{ii}.png', p[..., ::-1])
     }
-    (batches, down_scale_ratio_, pad_size_)
+    Ok((batches, down_scale_ratio_, pad_size_))
 }
 
 fn process_arrays(
@@ -212,9 +216,11 @@ pub fn det_rearrange_forward(
     mut img: RawImage,
     tgt_size: u32,
     max_batch_size: u8,
-    mut dbnet_batch_forward: impl FnMut(Array4<u8>) -> (Array4<f32>, Array4<f32>),
+    mut dbnet_batch_forward: impl FnMut(
+        Array4<u8>,
+    ) -> Result<(Array4<f32>, Array4<f32>), ProcessingError>,
     processor: &Box<dyn ImageOp + Send + Sync>,
-) -> (Array4<f32>, Array4<f32>) {
+) -> Result<(Array4<f32>, Array4<f32>), Error> {
     let (w, h) = (img.width, img.height);
 
     let (transpose, w, h) = if h < w { (true, h, w) } else { (false, w, h) };
@@ -282,23 +288,31 @@ pub fn det_rearrange_forward(
         max_batch_size as usize,
         tgt_size,
         processor,
-    );
+    )?;
 
-    let batch_results: Vec<_> = batches
+    let batch_results: Result<Vec<_>, PreProcessingError> = batches
         .into_par_iter()
         .map(|batch| {
-            let batch_arrays: Vec<_> = batch.into_iter().map(|v| v.to_ndarray()).collect();
-            let batch_array4 = vec_array3_to_array4(batch_arrays);
+            let batch_arrays: Result<Vec<_>, PreProcessingError> = batch
+                .into_iter()
+                .map(|v| v.to_ndarray().map_err(PreProcessingError::from))
+                .collect();
+            let batch_array4 = vec_array3_to_array4(batch_arrays?);
             batch_array4
         })
         .collect();
 
-    let (db_lst, mask_lst): (Vec<_>, Vec<_>) = batch_results
+    let pad_size = match pad_size {
+        Some(v) => v,
+        None => Err(PreProcessingError::Empty)?,
+    };
+
+    let (db_lst, mask_lst): (Vec<_>, Vec<_>) = batch_results?
         .into_iter()
         .map(|v| dbnet_batch_forward(v))
-        .collect::<Vec<_>>()
+        .collect::<Result<Vec<_>, ProcessingError>>()?
         .into_par_iter()
-        .flat_map(|(db, mask)| process_arrays(&db, &mask, tgt_size as usize, pad_size.unwrap()))
+        .flat_map(|(db, mask)| process_arrays(&db, &mask, tgt_size as usize, pad_size))
         .unzip();
     let db = unrearrange(
         db_lst,
@@ -311,7 +325,7 @@ pub fn det_rearrange_forward(
         ph_step as usize,
         patch_size as usize,
         &rel_step_list,
-    );
+    )?;
 
     let mask = unrearrange(
         mask_lst,
@@ -324,18 +338,18 @@ pub fn det_rearrange_forward(
         ph_step as usize,
         patch_size as usize,
         &rel_step_list,
-    );
+    )?;
 
-    (db, mask)
+    Ok((db, mask))
 }
 
-fn vec_array3_to_array4<T: Clone>(arrays: Vec<Array3<T>>) -> Array4<T> {
+fn vec_array3_to_array4<T: Clone>(arrays: Vec<Array3<T>>) -> Result<Array4<T>, PreProcessingError> {
     if arrays.is_empty() {
-        panic!("Cannot create Array4 from empty vector")
+        Err(PreProcessingError::Empty)?
     }
 
     let views: Vec<_> = arrays.iter().map(|a| a.view()).collect();
-    stack(Axis(0), &views).unwrap()
+    Ok(stack(Axis(0), &views)?)
 }
 
 fn unrearrange(
@@ -349,8 +363,11 @@ fn unrearrange(
     ph_step: usize,
     patch_size: usize,
     rel_step_list: &Vec<f64>,
-) -> Array4<f32> {
-    let h = *patch_lst[0].shape().last().unwrap();
+) -> Result<Array4<f32>, PostProcessingError> {
+    let h = *patch_lst[0]
+        .shape()
+        .last()
+        .ok_or(PostProcessingError::Empty)?;
     let psize = h;
     let step = (ph_step as f64 * psize as f64 / patch_size as f64) as usize;
     let pw = (psize as f64 / pw_num as f64) as usize;
@@ -395,11 +412,12 @@ fn unrearrange(
     } else {
         tgtmap
     };
-    tgtmap.insert_axis(Axis(0))
+    Ok(tgtmap.insert_axis(Axis(0)))
 }
 
 #[cfg(test)]
 mod tests {
+    use base_util::error::ProcessingError;
     use interface::image::{CpuImageProcessor, ImageOp, RawImage};
     use ndarray::Array4;
 
@@ -407,23 +425,27 @@ mod tests {
 
     #[test]
     fn find_vertical() {
-        let img = RawImage::new("./imgs/01_1-optimized.png").unwrap();
+        let img = RawImage::new("./imgs/01_1-optimized.png").expect("couldnt load npy file");
         let cpu = Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
-        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking, &cpu);
-        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2_v.npy").unwrap();
-        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2_v.npy").unwrap();
+        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking, &cpu).expect("failed");
+        let ex_db: Array4<f32> =
+            ndarray_npy::read_npy("npys/db2_v.npy").expect("couldnt load npy file");
+        let ex_mask: Array4<f32> =
+            ndarray_npy::read_npy("npys/mask2_v.npy").expect("couldnt load npy file");
         assert_eq!(db, ex_db);
         assert_eq!(mask, ex_mask);
     }
 
     #[test]
     fn find_horizontal() {
-        let img = RawImage::new("./imgs/01_1-optimized.png").unwrap();
+        let img = RawImage::new("./imgs/01_1-optimized.png").expect("couldnt load npy file");
         let cpu = Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
         let img = cpu.rotate_right(img);
-        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking2, &cpu);
-        let ex_db: Array4<f32> = ndarray_npy::read_npy("npys/db2_h.npy").unwrap();
-        let ex_mask: Array4<f32> = ndarray_npy::read_npy("npys/mask2_h.npy").unwrap();
+        let (db, mask) = det_rearrange_forward(img, 2048, 4, mocking2, &cpu).expect("failed");
+        let ex_db: Array4<f32> =
+            ndarray_npy::read_npy("npys/db2_h.npy").expect("couldnt load npy file");
+        let ex_mask: Array4<f32> =
+            ndarray_npy::read_npy("npys/mask2_h.npy").expect("couldnt load npy file");
         assert_eq!(db.shape(), ex_db.shape());
 
         assert_eq!(db, ex_db);
@@ -432,22 +454,28 @@ mod tests {
         assert_eq!(mask, ex_mask);
     }
 
-    fn mocking(input: Array4<u8>) -> (Array4<f32>, Array4<f32>) {
-        let input_ex: Array4<u8> = ndarray_npy::read_npy("npys/input.npy").unwrap();
+    fn mocking(input: Array4<u8>) -> Result<(Array4<f32>, Array4<f32>), ProcessingError> {
+        let input_ex: Array4<u8> =
+            ndarray_npy::read_npy("npys/input.npy").expect("couldnt load npy file");
         assert_eq!(input.shape(), input_ex.shape());
 
         assert_eq!(input, input_ex);
-        let db: Array4<f32> = ndarray_npy::read_npy("npys/db_v.npy").unwrap();
-        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask_v.npy").unwrap();
-        (db, mask)
+        let db: Array4<f32> =
+            ndarray_npy::read_npy("npys/db_v.npy").expect("couldnt load npy file");
+        let mask: Array4<f32> =
+            ndarray_npy::read_npy("npys/mask_v.npy").expect("couldnt load npy file");
+        Ok((db, mask))
     }
-    fn mocking2(input: Array4<u8>) -> (Array4<f32>, Array4<f32>) {
-        let input_ex: Array4<u8> = ndarray_npy::read_npy("npys/input_h.npy").unwrap();
+    fn mocking2(input: Array4<u8>) -> Result<(Array4<f32>, Array4<f32>), ProcessingError> {
+        let input_ex: Array4<u8> =
+            ndarray_npy::read_npy("npys/input_h.npy").expect("couldnt load npy file");
         assert_eq!(input.shape(), input_ex.shape());
 
         assert_eq!(input, input_ex);
-        let db: Array4<f32> = ndarray_npy::read_npy("npys/db_h.npy").unwrap();
-        let mask: Array4<f32> = ndarray_npy::read_npy("npys/mask_h.npy").unwrap();
-        (db, mask)
+        let db: Array4<f32> =
+            ndarray_npy::read_npy("npys/db_h.npy").expect("couldnt load npy file");
+        let mask: Array4<f32> =
+            ndarray_npy::read_npy("npys/mask_h.npy").expect("couldnt load npy file");
+        Ok((db, mask))
     }
 }

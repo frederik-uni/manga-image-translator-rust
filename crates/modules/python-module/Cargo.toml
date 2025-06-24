@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 interface.workspace = true
 anyhow.workspace = true
+base-util.workspace = true

@@ -79,7 +79,6 @@ jobs:
         if: matrix.platform.os != 'windows'
         uses: ./.github/actions/python-build
         with:
-          interpreters: ${{ steps.setup-python.outputs.interpreters }}
           name: ${{ matrix.platform.name }}
 
   build-windows-python:

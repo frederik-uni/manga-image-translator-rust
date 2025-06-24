@@ -1,3 +1,4 @@
+use base_util::error::ProcessingError;
 use criterion::{criterion_group, criterion_main, Criterion};
 use interface::image::{dummy::DummyImageProcessor, CpuImageProcessor, ImageOp, RawImage};
 use ndarray::Array4;
@@ -9,19 +10,24 @@ use util::det_arrange::det_rearrange_forward;
 static DB: Lazy<Mutex<Option<Array4<f32>>>> = Lazy::new(|| Mutex::new(None));
 static MASK: Lazy<Mutex<Option<Array4<f32>>>> = Lazy::new(|| Mutex::new(None));
 
-fn mocking(_: Array4<u8>) -> (Array4<f32>, Array4<f32>) {
-    let db = DB.lock().unwrap();
-    let mask = MASK.lock().unwrap();
-    (db.as_ref().unwrap().clone(), mask.as_ref().unwrap().clone())
+fn mocking(_: Array4<u8>) -> Result<(Array4<f32>, Array4<f32>), ProcessingError> {
+    let db = DB.lock().expect("mutex error");
+    let mask = MASK.lock().expect("mutex error");
+    Ok((
+        db.as_ref().expect("db file not loaded yet").clone(),
+        mask.as_ref().expect("mask file not loaded yet").clone(),
+    ))
 }
 
 fn bench_find_contours_from_ndarray(c: &mut Criterion) {
-    let img = RawImage::new("./imgs/01_1-optimized.png").unwrap();
+    let img = RawImage::new("./imgs/01_1-optimized.png").expect("couldnt load image");
     let cpu = Box::new(CpuImageProcessor::default()) as Box<dyn ImageOp + Send + Sync>;
 
     {
-        *DB.lock().unwrap() = Some(ndarray_npy::read_npy("npys/db.npy").unwrap());
-        *MASK.lock().unwrap() = Some(ndarray_npy::read_npy("npys/mask.npy").unwrap());
+        *DB.lock().expect("failed to lock DB") =
+            Some(ndarray_npy::read_npy("npys/db.npy").expect("couldnt load npy"));
+        *MASK.lock().expect("failed to lock MASK") =
+            Some(ndarray_npy::read_npy("npys/mask.npy").expect("couldnt load npy"));
     }
 
     c.bench_function("det_rearrange_forward", |b| {

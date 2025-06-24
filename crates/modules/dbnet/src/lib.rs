@@ -1,5 +1,7 @@
-use anyhow::anyhow;
-use base_util::onnx::new_session;
+use base_util::{
+    error::{ModelLoadError, ProcessingError},
+    onnx::new_session,
+};
 use interface::{
     detectors::{textlines::Quadrilateral, Detector, Mask},
     image::{DimType, ImageOp, Interpolation, RawImage},
@@ -56,20 +58,17 @@ impl Model for DbNetDetector {
         self.model = None;
     }
 
-    fn load(&mut self) -> anyhow::Result<()> {
+    fn load(&mut self) -> Result<(), ModelLoadError> {
         let models = self.models();
         let models = models.get("model").expect("Modelname was registered");
         self.model = Some(new_session(
-            self.db
-                .mode_db
-                .get(
-                    self.kind(),
-                    self.name(),
-                    "model.onnx",
-                    models.url,
-                    models.hash,
-                )
-                .ok_or(anyhow!("No model found"))?,
+            self.db.mode_db.get(
+                self.kind(),
+                self.name(),
+                "model.onnx",
+                models.url,
+                models.hash,
+            )?,
             self.db.providers.clone(),
         )?);
         Ok(())
@@ -150,21 +149,19 @@ impl Default for DefaultOptions {
 fn det_batch_forward_default(
     session: &mut Session,
     batch: Array4<u8>,
-) -> (Array4<f32>, Array4<f32>) {
+) -> Result<(Array4<f32>, Array4<f32>), ProcessingError> {
     let batch = batch
         .mapv(|x| x as f32 / 127.5 - 1.0)
         .permuted_axes([0, 3, 1, 2]);
-    let tensor = Tensor::from_array(batch).unwrap();
-    let outputs = session.run(ort::inputs!["input" => tensor]).unwrap();
-    let db: ArrayViewD<f32> = outputs["db"].try_extract_array().unwrap();
-    let mask: ArrayViewD<f32> = outputs["mask"].try_extract_array().unwrap();
+    let tensor = Tensor::from_array(batch)?;
+    let outputs = session.run(ort::inputs!["input" => tensor])?;
+    let db: ArrayViewD<f32> = outputs["db"].try_extract_array()?;
+    let mask: ArrayViewD<f32> = outputs["mask"].try_extract_array()?;
     let db = db.mapv(|x| 1.0 / (1.0 + (-x).exp()));
-    (
-        db.into_dimensionality::<ndarray::Ix4>().unwrap(),
-        mask.into_dimensionality::<ndarray::Ix4>()
-            .unwrap()
-            .to_owned(),
-    )
+    Ok((
+        db.into_dimensionality::<ndarray::Ix4>()?,
+        mask.into_dimensionality::<ndarray::Ix4>()?.to_owned(),
+    ))
 }
 
 impl Detector for DbNetDetector {
@@ -188,13 +185,18 @@ impl Detector for DbNetDetector {
                 true => {
                     let v = |batch| det_batch_forward_default(session, batch);
                     let shape = (img.height, img.width);
-                    let (db, mask) =
-                        det_rearrange_forward(img, options.detect_size as u32, 4, v, img_processor);
+                    let (db, mask) = det_rearrange_forward(
+                        img,
+                        options.detect_size as u32,
+                        4,
+                        v,
+                        img_processor,
+                    )?;
                     (db, mask, shape, 1.0, 1.0, 0, 0)
                 }
                 false => {
                     let resized = util::imageproc::resize_aspect_ratio(
-                        bilateral_filter(&img.as_opencv_mat(), 17, 80.0, 80.0, BORDER_DEFAULT)?,
+                        bilateral_filter(&img.as_opencv_mat()?, 17, 80.0, 80.0, BORDER_DEFAULT)?,
                         options.detect_size as i64,
                         Interpolation::Bilinear,
                         1.0,
@@ -203,8 +205,8 @@ impl Detector for DbNetDetector {
                     let ratio_h = 1.0 / resized.ratio;
                     let ratio_w = ratio_h;
                     let shape = (resized.img.height, resized.img.width);
-                    let img = resized.img.to_ndarray().insert_axis(ndarray::Axis(0));
-                    let (db, mask) = det_batch_forward_default(session, img);
+                    let img = resized.img.to_ndarray()?.insert_axis(ndarray::Axis(0));
+                    let (db, mask) = det_batch_forward_default(session, img)?;
                     (
                         db,
                         mask,
@@ -234,12 +236,25 @@ impl Detector for DbNetDetector {
 
         let (mut boxes, mut scores) = det.call(
             Batch { shape: vec![shape] },
-            db.mapv(|v| v).into_dimensionality().unwrap(),
+            db.mapv(|v| v).into_dimensionality()?,
             false,
-        );
+        )?;
 
-        let boxes = boxes.remove(0).unwrap();
-        let scores = scores.remove(0).unwrap();
+        let boxes = boxes.remove(0);
+        let scores = scores.remove(0);
+        let (boxes, scores) = match (boxes, scores) {
+            (Some(b), Some(s)) => (b, s),
+            _ => {
+                return Ok((
+                    vec![],
+                    Mask {
+                        width: 0,
+                        height: 0,
+                        data: Vec::new(),
+                    },
+                ))
+            }
+        };
         let polys = filter_boxes_and_adjust(&boxes, ratio_w, ratio_h);
         let quadrilateral = polys
             .outer_iter()

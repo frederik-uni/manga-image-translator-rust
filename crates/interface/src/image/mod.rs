@@ -38,25 +38,30 @@ pub struct RawImage {
 
 #[cfg(feature = "debug")]
 impl RawImage {
-    pub fn draw_bbox(&mut self, textlines: &[Quadrilateral]) {
+    pub fn draw_bbox(&mut self, textlines: &[Quadrilateral]) -> Result<(), &'static str> {
         use tiny_skia::{Color, Paint, Pixmap, Stroke};
 
-        let rgb_img = self.clone().to_image();
-        let mut pixmap = Pixmap::new(self.width as u32, self.height as u32)
-            .ok_or("Failed to create Pixmap")
-            .unwrap();
+        let rgb_img = self
+            .clone()
+            .to_image()
+            .ok_or("Failed to convert to image")?;
+        let mut pixmap =
+            Pixmap::new(self.width as u32, self.height as u32).ok_or("Failed to create Pixmap")?;
 
         for (x, y, pixel) in rgb_img.enumerate_pixels() {
             let i = (y * self.width as u32 + x) as usize;
             let r = pixel[0];
             let g = pixel[1];
             let b = pixel[2];
-            pixmap.pixels_mut()[i] =
-                tiny_skia::PremultipliedColorU8::from_rgba(r, g, b, 255).unwrap();
+            pixmap.pixels_mut()[i] = tiny_skia::PremultipliedColorU8::from_rgba(r, g, b, 255)
+                .expect("Alpha needs to be >= rgb");
         }
 
         let mut paint = Paint::default();
-        paint.set_color(Color::from_rgba(1.0, 0.0, 0.0, 1.0).unwrap()); // Red
+        paint.set_color(
+            Color::from_rgba(1.0, 0.0, 0.0, 1.0)
+                .expect("rbga values need to be in range from 0 to 1"),
+        );
         let stroke = Stroke {
             width: 2.0,
             ..Default::default()
@@ -72,7 +77,7 @@ impl RawImage {
                     pb.line_to(x as f32, y as f32);
                 }
                 pb.close();
-                let path = pb.finish().unwrap();
+                let path = pb.finish().ok_or("invalid path")?;
                 pixmap.stroke_path(
                     &path,
                     &paint,
@@ -87,23 +92,25 @@ impl RawImage {
             .chunks(4)
             .flat_map(|v| &v[..3])
             .cloned()
-            .collect()
+            .collect();
+        Ok(())
     }
 
-    pub fn display(&self) {
+    pub fn display(&self) -> anyhow::Result<()> {
         use show_image::{create_window, ImageView};
-        let window = create_window("Image", Default::default()).unwrap();
+        let window = create_window("Image", Default::default())?;
 
         let image = ImageView::new(
             show_image::ImageInfo::rgb8(self.width as u32, self.height as u32),
             &self.data,
         );
 
-        window.set_image("frame-0", image).unwrap();
+        window.set_image("frame-0", image)?;
 
         println!("Press Enter to close the window...");
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
+        std::io::stdin().read_line(&mut input)?;
+        Ok(())
     }
 }
 
@@ -119,7 +126,7 @@ impl fmt::Debug for RawImage {
 }
 
 impl RawImage {
-    pub fn to_ndarray(self) -> Array<u8, Dim<[usize; 3]>> {
+    pub fn to_ndarray(self) -> Result<Array<u8, Dim<[usize; 3]>>, ndarray::ShapeError> {
         Array::from_shape_vec(
             Dim([
                 self.height as usize,
@@ -128,27 +135,24 @@ impl RawImage {
             ]),
             self.data.clone(),
         )
-        .unwrap()
     }
 
-    pub fn as_opencv_mat<'a>(&'a self) -> Mat {
-        let mat = Mat::from_slice(&self.data).unwrap();
+    pub fn as_opencv_mat<'a>(&'a self) -> Result<Mat, opencv::Error> {
+        let mat = Mat::from_slice(&self.data)?;
         let mat = mat
-            .reshape(self.channels as i32, self.height as i32)
-            .unwrap()
+            .reshape(self.channels as i32, self.height as i32)?
             .clone_pointee();
-        mat
+        Ok(mat)
     }
 
-    pub fn to_image(self) -> image::RgbImage {
+    pub fn to_image(self) -> Option<image::RgbImage> {
         #[cfg(feature = "u16-dims")]
-        return image::RgbImage::from_raw(self.width as u32, self.height as u32, self.data)
-            .unwrap();
+        return image::RgbImage::from_raw(self.width as u32, self.height as u32, self.data);
         #[cfg(not(feature = "u16-dims"))]
-        image::RgbImage::from_raw(self.width, self.height, self.data).unwrap()
+        image::RgbImage::from_raw(self.width, self.height, self.data)
     }
 
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<RawImage, Box<dyn std::error::Error>> {
+    pub fn new<P: AsRef<Path>>(path: P) -> anyhow::Result<RawImage> {
         let v = path.as_ref();
         let path = if v.is_relative() {
             base_util::project::root_path().join(v)

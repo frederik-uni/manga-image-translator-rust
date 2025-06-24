@@ -11,7 +11,8 @@ use numpy::{
     ndarray::{Array2, Array3},
     IntoPyArray as _, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray3,
 };
-use pyo3::prelude::*;
+use parking_lot::Mutex;
+use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
 #[pyclass]
 pub struct Session {
@@ -46,17 +47,20 @@ impl Session {
 
     fn default_detector(&self) -> PyDetector {
         PyDetector {
-            inner: Box::new(DbNetDetector::new(self.inner.clone(), false))
-                as Box<dyn Detector + Send + Sync>,
-
+            inner: Arc::new(Mutex::new(
+                Box::new(DbNetDetector::new(self.inner.clone(), false))
+                    as Box<dyn Detector + Send + Sync>,
+            )),
             processor: self.processor.clone(),
         }
     }
 
     fn convnext_detector(&self) -> PyDetector {
         PyDetector {
-            inner: Box::new(DbNetDetector::new(self.inner.clone(), true))
-                as Box<dyn Detector + Send + Sync>,
+            inner: Arc::new(Mutex::new(
+                Box::new(DbNetDetector::new(self.inner.clone(), true))
+                    as Box<dyn Detector + Send + Sync>,
+            )),
             processor: self.processor.clone(),
         }
     }
@@ -105,32 +109,33 @@ impl PyPreprocessorOptions {
 #[pyclass]
 pub struct PyDetector {
     processor: Arc<Box<dyn ImageOp + Send + Sync>>,
-    inner: Box<dyn Detector + Send + Sync>,
+    inner: Arc<Mutex<Box<dyn Detector + Send + Sync>>>,
 }
 
 #[pyclass]
 pub struct PyImage {
-    inner: RawImage,
+    inner: Arc<RawImage>,
 }
 
 #[pymethods]
 impl PyImage {
     #[new]
     fn new(path: &str) -> PyResult<Self> {
-        Ok(PyImage {
-            inner: RawImage::new(path).unwrap(),
-        })
+        let v = RawImage::new(path).map_err(|v| PyRuntimeError::new_err(v.to_string()))?;
+
+        Ok(PyImage { inner: Arc::new(v) })
     }
 
-    pub fn to_numpy<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray3<u8>> {
+    pub fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray3<u8>>> {
         let data = self.inner.data.clone();
         let (width, height, channels) = (
             self.inner.width as usize,
             self.inner.height as usize,
             self.inner.channels as usize,
         );
-        let array = Array3::from_shape_vec((height, width, channels), data).unwrap();
-        array.into_pyarray(py)
+        let array = Array3::from_shape_vec((height, width, channels), data)
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        Ok(array.into_pyarray(py))
     }
 
     #[staticmethod]
@@ -140,12 +145,12 @@ impl PyImage {
 
         let array_view = array.as_array().into_iter().map(|v| *v).collect::<Vec<_>>();
         Ok(PyImage {
-            inner: RawImage {
+            inner: Arc::new(RawImage {
                 data: array_view,
                 width: width as u16,
                 height: height as u16,
                 channels: channels as u8,
-            },
+            }),
         })
     }
 }
@@ -184,9 +189,11 @@ impl PyQuadrilateral {
 
 #[pymethods]
 impl PyDetector {
-    fn load(&mut self) -> PyResult<()> {
-        self.inner.load().unwrap();
-        Ok(())
+    fn load(&self) -> PyResult<()> {
+        self.inner
+            .lock()
+            .load()
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 
     fn detect<'py>(
@@ -196,18 +203,23 @@ impl PyDetector {
         preprocessor_options: PyRef<PyPreprocessorOptions>,
         options: PyRef<PyDefaultOptions>,
     ) -> PyResult<(Vec<PyQuadrilateral>, Bound<'py, PyArray2<u8>>)> {
-        let (qua, mask) = self
-            .inner
-            .detect(
-                &image.inner,
-                preprocessor_options.inner,
-                options.inner.dump(),
-                &*self.processor,
-            )
-            .unwrap();
+        let inner = self.inner.clone();
+        let preprocessor_options = preprocessor_options.inner;
+        let options = options.inner;
+        let img = image.inner.clone();
+        let processor = self.processor.clone();
+        let det = py
+            .allow_threads(|| {
+                inner
+                    .lock()
+                    .detect(&img, preprocessor_options, options.dump(), &*processor)
+            })
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()));
+        let (qua, mask) = det?;
         let data = mask.data.clone();
         let (width, height) = (mask.width as usize, mask.height as usize);
-        let array = Array2::from_shape_vec((height, width), data).unwrap();
+        let array = Array2::from_shape_vec((height, width), data)
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
         let qua = qua
             .into_iter()
@@ -217,11 +229,11 @@ impl PyDetector {
     }
 
     fn unload(&mut self) {
-        self.inner.unload()
+        self.inner.lock().unload()
     }
 
     fn loaded(&self) -> bool {
-        self.inner.loaded()
+        self.inner.lock().loaded()
     }
 }
 
