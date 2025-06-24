@@ -15,19 +15,14 @@ jobs:
         platform:
           - name: linux-x86_64
             runs-on: ubuntu-latest
-            os: linux
           - name: linux-arm64
             runs-on: ubuntu-24.04-arm
-            os: linux
           - name: macos-arm64
             runs-on: macos-latest
-            os: macos
           - name: macos-x86_64
             runs-on: macos-13
-            os: macos
           - name: windows-x86_64
             runs-on: windows-latest
-            os: windows
 
     name: Setup on ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.runs-on }}
@@ -36,10 +31,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup ${{ matrix.platform.os }}
-        uses: ./.github/workflows/setup-${{ matrix.platform.os }}.yml
-        with:
-          runs-on: ${{ matrix.platform.runs-on }}
+      - name: Setup Linux
+        if: matrix.platform.os == 'linux'
+        uses: ./.github/actions/setup-linux.yml
+
+      - name: Setup macOS
+        if: matrix.platform.os == 'macos'
+        uses: ./.github/actions/setup-macos.yml
+
+      - name: Setup Windows
+        if: matrix.platform.os == 'windows'
+        uses: ./.github/actions/setup-windows.yml
 
       - name: Setup Rust
         uses: ./.github/workflows/setup-rust.yml

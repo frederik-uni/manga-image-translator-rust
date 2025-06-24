@@ -12,13 +12,10 @@ jobs:
         platform:
           - name: linux-x86_64
             runs-on: ubuntu-latest
-            os: linux
           - name: macos-arm64
             runs-on: macos-latest
-            os: macos
           - name: windows-x86_64
             runs-on: windows-latest
-            os: windows
 
     name: Setup on ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.runs-on }}
@@ -27,8 +24,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup ${{ matrix.platform.os }}
-        uses: ./.github/actions/setup-${{ matrix.platform.os }}.yml
+      - name: Setup Linux
+        if: matrix.platform.os == 'linux'
+        uses: ./.github/actions/setup-linux.yml
+        with:
+          runs-on: ${{ matrix.platform.runs-on }}
+
+      - name: Setup macOS
+        if: matrix.platform.os == 'macos'
+        uses: ./.github/actions/setup-macos.yml
+        with:
+          runs-on: ${{ matrix.platform.runs-on }}
+
+      - name: Setup Windows
+        if: matrix.platform.os == 'windows'
+        uses: ./.github/actions/setup-windows.yml
         with:
           runs-on: ${{ matrix.platform.runs-on }}
 
