@@ -65,6 +65,7 @@ jobs:
 
       - name: Setup Python
         if: matrix.platform.os != 'windows'
+        id: setup-python
         uses: ./.github/actions/setup-python
 
       - name: Tests & Building
@@ -101,6 +102,7 @@ jobs:
 
       - name: Setup Python
         uses: ./.github/actions/setup-python
+        id: setup-python
         with:
           python-version: ${{ matrix.python-version }}
 
