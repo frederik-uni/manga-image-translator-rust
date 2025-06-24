@@ -8,6 +8,8 @@ inputs:
     required: true
   test:
     required: true
+  runs-on:
+    required: true
 
 runs:
   using: "composite"
@@ -17,7 +19,7 @@ runs:
       run: cargo fmt --all -- --check
 
     - name: Run tests
-      if: inputs.test && matrix.os == 'macos-latest'
+      if: inputs.test && inpugs.runs-on == 'macos-latest'
       shell: bash
       run: cargo test --verbose
 

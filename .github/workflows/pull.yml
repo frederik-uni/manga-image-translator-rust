@@ -52,4 +52,5 @@ jobs:
         uses: ./.github/actions/cargo
         with:
           test: true
+          runs-on: ${{ matrix.platform.runs-on }}
           name: ${{ matrix.platform.name }}

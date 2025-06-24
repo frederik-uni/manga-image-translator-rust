@@ -1,16 +1,16 @@
 name: "Setup Python"
+
+inputs:
+  python-version:
+    required: false
+
 runs:
   using: "composite"
   steps:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: |
-          3.9
-          3.10
-          3.11
-          3.12
-          3.13
+        python-version: ${{ inputs.python-version || '3.9\n3.10\n3.11\n3.12\n3.13' }}
 
     - name: Install maturin
       shell: bash

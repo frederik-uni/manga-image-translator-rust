@@ -54,6 +54,7 @@ jobs:
         uses: ./.github/workflows/cargo
         with:
           test: true
+          runs-on: ${{ matrix.platform.runs-on }}
           name: ${{ matrix.platform.name }}
 
       - name: Build wheels
