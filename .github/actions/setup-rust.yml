@@ -1,0 +1,13 @@
+name: "Setup Rust"
+
+env:
+  CARGO_TERM_COLOR: always
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2

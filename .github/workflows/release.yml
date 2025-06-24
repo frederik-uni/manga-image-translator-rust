@@ -1,0 +1,106 @@
+name: Release Action
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform:
+          - name: linux-x86_64
+            runs-on: ubuntu-latest
+            os: linux
+          - name: linux-arm64
+            runs-on: ubuntu-24.04-arm
+            os: linux
+          - name: macos-arm64
+            runs-on: macos-latest
+            os: macos
+          - name: macos-x86_64
+            runs-on: macos-13
+            os: macos
+          - name: windows-x86_64
+            runs-on: windows-latest
+            os: windows
+
+    name: Setup on ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.runs-on }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup ${{ matrix.platform.os }}
+        uses: ./.github/workflows/setup-${{ matrix.platform.os }}.yml
+        with:
+          runs-on: ${{ matrix.platform.runs-on }}
+
+      - name: Setup Rust
+        uses: ./.github/workflows/setup-rust.yml
+
+      - name: Setup Python
+        uses: ./.github/workflows/setup-python.yml
+
+      - name: Tests & Building
+        uses: ./.github/workflows/cargo.yml
+        with:
+          test: true
+          name: ${{ matrix.platform.name }}
+
+      - name: Build wheels
+        uses: ./.github/workflows/python-build.yml
+        with:
+          interpreters: ${{ steps.setup-python.outputs.interpreters }}
+          name: ${{ matrix.platform.name }}
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Prepare Release Files
+        run: |
+          mkdir release
+          cp -- "-linux-x86_64/dbnet" release/manga-image-translator-linux-x86_64
+          cp -- "-windows-x86_64/dbnet.exe" release/manga-image-translator-windows-x86_64.exe
+          cp -- "-macos-x86_64/dbnet" release/manga-image-translator-macos-x86_64
+          cp -- "-linux-arm64/dbnet" release/manga-image-translator-linux-arm64
+          cp -- "-macos-arm64/dbnet" release/manga-image-translator-macos-arm64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/manga-image-translator-macos-x86_64
+            release/manga-image-translator-linux-x86_64
+            release/manga-image-translator-windows-x86_64.exe
+            release/manga-image-translator-linux-arm64
+            release/manga-image-translator-macos-arm64
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: PyPI Release
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          pip install --upgrade twine
+          find wheels-* -name "*.whl" -print0 | xargs -0 twine upload --skip-existing

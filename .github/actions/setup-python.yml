@@ -1,0 +1,34 @@
+name: "Setup Python"
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: |
+          3.9
+          3.10
+          3.11
+          3.12
+          3.13
+
+    - name: Install maturin
+      run: pip install maturin
+
+    - name: Find Python interpreters
+      id: find-pythons
+      shell: bash
+      run: |
+        paths=""
+        set +e
+        for version in 3.9 3.10 3.11 3.12 3.13; do
+          python_path=$(which python${version} || which python${version/./})
+          if [ -x "$python_path" ]; then
+            echo "Found Python $version at $python_path"
+            paths+="--interpreter $python_path "
+          else
+            echo "Python $version not found"
+          fi
+        done
+        set -e
+        echo "interpreters=$paths" >> "$GITHUB_OUTPUT"

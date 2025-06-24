@@ -1,0 +1,24 @@
+name: Build python whls
+
+inputs:
+  name:
+    required: true
+  interpreters:
+    required: true
+    description: "Python interpreter paths to use for build"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build with maturin
+      run: |
+        cd crates/py-bindings
+        maturin build --release ${{ inputs.interpreters }}
+      shell: bash
+
+    - name: Upload wheel artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-${{ inputs.name }}
+        path: target/wheels/*.whl
+        retention-days: 5

@@ -1,0 +1,20 @@
+name: "Setup macOS"
+
+inputs:
+  runs-on:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Optionally install OpenSSL
+      if: ${{ runs-on == 'macos-13' }}
+      run: brew install openssl@3
+
+    - name: Install macOS dependencies
+      run: |
+        if [[ "${{ inputs.runs-on }}" == "macos-13" ]]; then
+          brew install openssl@3
+          echo 'export OPENSSL_DIR=$(brew --prefix openssl@3)' >> $GITHUB_ENV
+        fi
+        brew install opencv llvm

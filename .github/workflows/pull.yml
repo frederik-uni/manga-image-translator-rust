@@ -1,0 +1,47 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform:
+          - name: linux-x86_64
+            runs-on: ubuntu-latest
+            os: linux
+          - name: linux-arm64
+            runs-on: ubuntu-24.04-arm
+            os: linux
+          - name: macos-arm64
+            runs-on: macos-latest
+            os: macos
+          - name: macos-x86_64
+            runs-on: macos-13
+            os: macos
+          - name: windows-x86_64
+            runs-on: windows-latest
+            os: windows
+
+    name: Setup on ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.runs-on }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup ${{ matrix.platform.os }}
+        uses: ./.github/actions/setup-${{ matrix.platform.os }}.yml
+        with:
+          runs-on: ${{ matrix.platform.runs-on }}
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust.yml
+
+      - name: Tests & Building
+        uses: ./.github/actions/cargo.yml
+        with:
+          test: true
+          name: ${{ matrix.platform.name }}

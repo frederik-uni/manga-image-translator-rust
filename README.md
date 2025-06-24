@@ -68,6 +68,6 @@
     - [x] macos x86_64
     - [x] linux x86_64
     - [x] linux arm64
-    - [~] windows x86_64
+    - [x] windows x86_64
     - [ ] windows arm64(no prebuild clang)
     - [ ] ~~windows x64~~

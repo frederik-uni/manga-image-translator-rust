@@ -1,0 +1,35 @@
+name: Setup Windows
+
+env:
+  OPENCV_INCLUDE_PATHS: "+C:\\tools\\opencv\\build\\include"
+
+inputs:
+  runs-on:
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install OpenCV (Windows)
+      run: choco install opencv
+
+    - name: Find OpenCV library and set environment variables
+      shell: pwsh
+      run: |
+        $files = Get-ChildItem -Path "C:\tools\opencv" -Recurse -Filter "opencv_world*.lib" |
+          Where-Object { $_.Name -notmatch "d\.lib$" }
+
+        if ($files.Count -eq 0) {
+            Write-Error "No matching OpenCV release libraries found (excluding debug builds)."
+            exit 1
+        }
+
+        $libFile = $files | Sort-Object Name -Descending | Select-Object -First 1
+
+        $libName = [System.IO.Path]::GetFileNameWithoutExtension($libFile.Name)
+        $libPath = $libFile.DirectoryName
+
+        echo "Found library: $libName in $libPath"
+
+        echo "OPENCV_LINK_LIBS=$libName" >> $env:GITHUB_ENV
+        echo "OPENCV_LINK_PATHS=+$libPath" >> $env:GITHUB_ENV
