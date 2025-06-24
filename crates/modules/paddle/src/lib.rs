@@ -268,7 +268,7 @@ mod tests {
     use crate::{PaddleDetector, PaddleOptions};
     use base_util::RawSerializable as _;
     use interface::{
-        detectors::{Detector, PreprocessorOptions},
+        detectors::{DefaultOptions, Detector, PreprocessorOptions},
         image::{CpuImageProcessor, ImageOp, RawImage},
         model::{CreateData, Model as _},
     };
@@ -290,7 +290,7 @@ mod tests {
             &RawImage::new("./imgs/232265329-6a560438-e887-4f7f-b6a1-a61b8648f781.png")
                 .expect("Failed to load image"),
             PreprocessorOptions::default(),
-            PaddleOptions::default().dump(),
+            DefaultOptions::default().dump(),
             &cpu_image_processor,
         )
         .expect("failed to detect");
