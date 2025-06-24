@@ -10,9 +10,15 @@ jobs:
     strategy:
       matrix:
         platform:
-          - { name: linux-x86_64, os: linux, runs-on: ubuntu-latest }
-          - { name: macos-arm64, os: macos, runs-on: macos-latest }
-          - { name: windows-x86_64, os: windows, runs-on: windows-latest }
+          - name: linux-x86_64
+            runs-on: ubuntu-latest
+            os: linux
+          - name: macos-arm64
+            runs-on: macos-latest
+            os: macos
+          - name: windows-x86_64
+            runs-on: windows-latest
+            os: windows
 
     name: Setup on ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.runs-on }}
