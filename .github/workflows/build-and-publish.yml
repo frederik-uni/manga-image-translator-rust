@@ -191,6 +191,7 @@ jobs:
         run: |
           mkdir release
           cp -- "-linux-x86_64/dbnet" release/manga-image-translator-linux-x86_64
+          cp -- "-linux-x86_64/dbnet.exe" release/manga-image-translator-windows-x86_64.exe
           cp -- "-linux-arm64/dbnet" release/manga-image-translator-linux-arm64
           cp -- "-macos-arm64/dbnet" release/manga-image-translator-macos-arm64
           cp -- "-macos-x86_64/dbnet" release/manga-image-translator-macos-x86_64
@@ -201,6 +202,7 @@ jobs:
           files: |
             release/manga-image-translator-macos-x86_64
             release/manga-image-translator-linux-x86_64
+            release/manga-image-translator-windows-x86_64.exe
             release/manga-image-translator-linux-arm64
             release/manga-image-translator-macos-arm64
           draft: false
