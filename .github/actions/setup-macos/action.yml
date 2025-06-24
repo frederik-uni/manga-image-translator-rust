@@ -8,7 +8,7 @@ runs:
   using: "composite"
   steps:
     - name: Optionally install OpenSSL
-      if: ${{ runs-on == 'macos-13' }}
+      if: ${{ inputs.runs-on == 'macos-13' }}
       shell: bash
       run: brew install openssl@3
 
