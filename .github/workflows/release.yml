@@ -47,6 +47,7 @@ jobs:
         uses: ./.github/workflows/setup-rust
 
       - name: Setup Python
+        if: matrix.platform.os != 'windows'
         uses: ./.github/workflows/setup-python
 
       - name: Tests & Building
@@ -56,13 +57,45 @@ jobs:
           name: ${{ matrix.platform.name }}
 
       - name: Build wheels
+        if: matrix.platform.os != 'windows'
         uses: ./.github/workflows/python-build
         with:
           interpreters: ${{ steps.setup-python.outputs.interpreters }}
           name: ${{ matrix.platform.name }}
+  build-windows-python:
+    if: ${{ matrix.platform == 'windows-x86_64' }}
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11, 3.12, 3.13]
+
+    runs-on: windows-latest
+    name: Build Windows Python Wheel with Python ${{ matrix.python-version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Windows
+        uses: ./.github/actions/setup-windows
+
+      - name: Setup Rust
+        uses: ./.github/workflows/setup-rust
+
+      - name: Setup Python
+        uses: ./.github/workflows/setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build wheels
+        uses: ./.github/workflows/python-build
+        with:
+          interpreters: ${{ steps.setup-python.outputs.interpreters }}
+          name: windows-x86_64-py${{ matrix.python-version }}
 
   release:
-    needs: build
+    needs:
+      - build
+      - build-windows-python
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
 
