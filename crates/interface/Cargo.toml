@@ -77,6 +77,6 @@ harness = false
 [features]
 default = ["u16-dims"]
 
-u16-dims = ["debug"]
+u16-dims = []
 debug = ["dep:show-image", "dep:tiny-skia"]
 gpu = []
