@@ -3,11 +3,14 @@ use std::sync::Arc;
 use base_util::onnx::{all_providers, Providers};
 use dbnet::{DbNetDetector, DefaultOptions};
 use interface::{
-    detectors::{Detector, PreprocessorOptions},
+    detectors::{textlines::Quadrilateral, Detector, PreprocessorOptions},
     image::{CpuImageProcessor, ImageOp, RawImage},
     model::{CreateData, Model as _},
 };
-use numpy::{PyArrayMethods, PyReadonlyArray3};
+use numpy::{
+    ndarray::{Array2, Array3},
+    IntoPyArray as _, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray3,
+};
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -119,6 +122,17 @@ impl PyImage {
         })
     }
 
+    pub fn to_numpy<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray3<u8>> {
+        let data = self.inner.data.clone();
+        let (width, height, channels) = (
+            self.inner.width as usize,
+            self.inner.height as usize,
+            self.inner.channels as usize,
+        );
+        let array = Array3::from_shape_vec((height, width, channels), data).unwrap();
+        array.into_pyarray(py)
+    }
+
     #[staticmethod]
     pub fn from_numpy(array: PyReadonlyArray3<u8>) -> PyResult<PyImage> {
         let dims = array.dims();
@@ -136,6 +150,38 @@ impl PyImage {
     }
 }
 
+#[pyclass]
+pub struct PyQuadrilateral {
+    inner: Quadrilateral,
+}
+
+#[pymethods]
+impl PyQuadrilateral {
+    fn score(&self) -> f64 {
+        self.inner.score()
+    }
+
+    fn aspect_ratio(&self) -> f64 {
+        self.inner.aspect_ratio()
+    }
+
+    fn area(&self) -> f64 {
+        self.inner.area()
+    }
+
+    fn vertical(&self) -> bool {
+        self.inner.vertical()
+    }
+
+    fn pts(&self) -> Vec<(i64, i64)> {
+        self.inner.pts().to_vec()
+    }
+
+    fn structure(&self) -> Vec<(i64, i64)> {
+        self.inner.structure().to_vec()
+    }
+}
+
 #[pymethods]
 impl PyDetector {
     fn load(&mut self) -> PyResult<()> {
@@ -143,13 +189,15 @@ impl PyDetector {
         Ok(())
     }
 
-    fn detect(
+    fn detect<'py>(
         &mut self,
+        py: Python<'py>,
         image: PyRef<PyImage>,
         preprocessor_options: PyRef<PyPreprocessorOptions>,
         options: PyRef<PyDefaultOptions>,
-    ) -> PyResult<()> {
-        self.inner
+    ) -> PyResult<(Vec<PyQuadrilateral>, Bound<'py, PyArray2<u8>>)> {
+        let (qua, mask) = self
+            .inner
             .detect(
                 &image.inner,
                 preprocessor_options.inner,
@@ -157,7 +205,15 @@ impl PyDetector {
                 &*self.processor,
             )
             .unwrap();
-        Ok(())
+        let data = mask.data.clone();
+        let (width, height) = (mask.width as usize, mask.height as usize);
+        let array = Array2::from_shape_vec((height, width), data).unwrap();
+
+        let qua = qua
+            .into_iter()
+            .map(|v| PyQuadrilateral { inner: v })
+            .collect();
+        Ok((qua, array.into_pyarray(py)))
     }
 
     fn unload(&mut self) {

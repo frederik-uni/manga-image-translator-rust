@@ -16,10 +16,10 @@
   - [x] dbnet
   - [x] none
   - [ ] ctd
-  - [ ] paddle
+  - [~] [paddle](https://github.com/mg-chao/paddle-ocr-rs)
   - [x] dbnet_convnext
-  - [ ] craft
   - [ ] python-module
+  - [ ] ~~craft~~
 - [ ] ocr
   - [ ] 32px
   - [ ] 48px

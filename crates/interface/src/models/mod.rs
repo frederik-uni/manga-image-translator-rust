@@ -23,6 +23,7 @@ impl ModelDb {
         hash: &str,
     ) -> Option<PathBuf> {
         let file_path = root_path().join("models").join(kind).join(name).join(file);
+        std::fs::create_dir_all(file_path.parent().unwrap()).unwrap();
         if !file_path.exists() {
             download_and_extract(url, &file_path).unwrap();
             if failure(&file_path, hash) {
