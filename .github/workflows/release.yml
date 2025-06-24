@@ -46,6 +46,17 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
 
+      - name: Set up Pythons
+        if: matrix.platform.os != 'windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.9
+            3.10
+            3.11
+            3.12
+            3.13
+
       - name: Setup Python
         if: matrix.platform.os != 'windows'
         uses: ./.github/actions/setup-python

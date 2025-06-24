@@ -12,16 +12,6 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-    - name: Set up Pythons
-      if: ${{ inputs.python-version == '' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: |
-          3.9
-          3.10
-          3.11
-          3.12
-          3.13
 
     - name: Install maturin
       shell: bash
