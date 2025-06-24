@@ -3,17 +3,32 @@ name: Build python whls
 inputs:
   name:
     required: true
-  interpreters:
-    required: true
-    description: "Python interpreter paths to use for build"
 
 runs:
   using: "composite"
   steps:
+    - name: Find Python interpreters
+      id: find-pythons
+      shell: bash
+      run: |
+        paths=""
+        set +e
+        for version in 3.9 3.10 3.11 3.12 3.13; do
+          python_path=$(which python${version} || which python${version/./})
+          if [ -x "$python_path" ]; then
+            echo "Found Python $version at $python_path"
+            paths+="--interpreter $python_path "
+          else
+            echo "Python $version not found"
+          fi
+        done
+        set -e
+        echo "interpreters=$paths" >> "$GITHUB_OUTPUT"
+
     - name: Build with maturin
       run: |
         cd crates/py-bindings
-        maturin build --release ${{ inputs.interpreters }}
+        maturin build --release ${{ steps.find-pythons.outputs.interpreters }}
       shell: bash
 
     - name: Upload wheel artifact

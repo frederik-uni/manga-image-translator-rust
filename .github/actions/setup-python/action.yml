@@ -16,21 +16,3 @@ runs:
     - name: Install maturin
       shell: bash
       run: pip install maturin
-
-    - name: Find Python interpreters
-      id: find-pythons
-      shell: bash
-      run: |
-        paths=""
-        set +e
-        for version in 3.9 3.10 3.11 3.12 3.13; do
-          python_path=$(which python${version} || which python${version/./})
-          if [ -x "$python_path" ]; then
-            echo "Found Python $version at $python_path"
-            paths+="--interpreter $python_path "
-          else
-            echo "Python $version not found"
-          fi
-        done
-        set -e
-        echo "interpreters=$paths" >> "$GITHUB_OUTPUT"

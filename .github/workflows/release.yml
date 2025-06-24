@@ -109,7 +109,6 @@ jobs:
       - name: Build wheels
         uses: ./.github/actions/python-build
         with:
-          interpreters: ${{ steps.setup-python.outputs.interpreters }}
           name: windows-x86_64-py${{ matrix.python-version }}
 
   release:
