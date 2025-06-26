@@ -1,0 +1,47 @@
+[package]
+name = "default-renderer"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "default_renderer"
+path = "src/lib.rs"
+
+[dependencies]
+fontdue = "0.9.3"
+hyphenation = "0.8.4"
+unicode-segmentation = "1.10"
+unicode-linebreak = "0.1"
+thiserror = "1.0"
+image = "0.25.6"
+fast_image_resize = "5.1.4"
+tiny-skia = "0.11.4"
+rayon = "1.10.0"
+
+
+[dev-dependencies]
+approx = "0.5"
+
+[[example]]
+name = "comprehensive_example"
+path = "examples/comprehensive_example.rs"
+
+[[example]]
+name = "image_rendering_example"
+path = "examples/image_rendering_example.rs"
+
+[[example]]
+name = "simple_image_example"
+path = "examples/simple_image_example.rs"
+
+[[example]]
+name = "text_inpainting_demo"
+path = "examples/text_inpainting_demo.rs"
+
+[[example]]
+name = "baseline_test"
+path = "examples/baseline_test.rs"
+
+[[example]]
+name = "baseline_comparison"
+path = "examples/baseline_comparison.rs"
