@@ -9,7 +9,7 @@ runs:
   steps:
     - name: Install OpenCV (Windows)
       shell: powershell
-      run: choco install opencv
+      run: choco install opencv llvm
 
     - name: Find OpenCV library and set environment variables
       shell: pwsh
