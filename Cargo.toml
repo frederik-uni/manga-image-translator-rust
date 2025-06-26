@@ -3,13 +3,14 @@ resolver = "3"
 members = [
     "crates/base-util",
     "crates/interface",
-    "crates/modules/*",
+    "crates/modules/detector/*",
+    "crates/modules/renderer/*",
     "crates/py-bindings",
     "crates/util",
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 
 [workspace.dependencies]
@@ -29,9 +30,10 @@ ort = { version = "2.0.0-rc.10" }
 ndarray = "0.16.1"
 tiny-skia = "0.11.4"
 geo = "0.30.0"
-dbnet = { path = "crates/modules/dbnet" }
-paddle = { path = "crates/modules/paddle" }
-none = { path = "crates/modules/none" }
+binary = { path = "crates/modules/renderer/binary" }
+dbnet = { path = "crates/modules/detector/dbnet" }
+paddle = { path = "crates/modules/detector/paddle" }
+none = { path = "crates/modules/detector/none" }
 
 ureq = "3.0.12"
 tempfile = "3.20.0"
