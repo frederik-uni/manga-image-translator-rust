@@ -4,7 +4,6 @@ members = [
     "crates/base-util",
     "crates/interface",
     "crates/modules/detector/*",
-    "crates/modules/renderer/*",
     "crates/py-bindings",
     "crates/util",
 ]
