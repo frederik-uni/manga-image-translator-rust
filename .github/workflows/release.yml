@@ -110,6 +110,61 @@ jobs:
         with:
           name: windows-x86_64-py${{ matrix.python-version }}
 
+      - name: Install wheel package
+        run: pip install wheel
+
+      - name: Write inject_dll.py script
+        run: |
+          $script = @'
+          from wheel.wheelfile import WheelFile
+          from pathlib import Path
+          import glob
+          import sys
+          import re
+
+          # === Locate DLL ===
+          dll_dir = Path("C:/tools/opencv")
+          dll_candidates = list(dll_dir.rglob("opencv_world*.dll"))
+          dlls = [dll for dll in dll_candidates if not re.search(r"d\.dll$", dll.name)]
+
+          if not dlls:
+              print("❌ No matching OpenCV DLLs found (excluding *d.dll).")
+              sys.exit(1)
+
+          dll_path = dlls[0]
+          print(f"✅ Found DLL: {dll_path}")
+
+          # === Locate wheel ===
+          wheel_matches = glob.glob("target/wheels/rusty_manga_image_translator-*.whl")
+          if not wheel_matches:
+              print("❌ No matching wheel found in target/wheels/")
+              sys.exit(1)
+
+          wheel_path = Path(wheel_matches[0])
+          print(f"✅ Found wheel: {wheel_path}")
+
+          # === Set up target path inside wheel ===
+          package_root_subdir = "rusty_manga_image_translator"
+          target_inside_wheel = f"{package_root_subdir}/{dll_path.name}"
+
+          # === Replace wheel in-place ===
+          tmp_wheel_path = wheel_path.with_name(wheel_path.stem + "_tmp.whl")
+
+          with WheelFile(wheel_path, 'r') as original_wheel:
+              with WheelFile(tmp_wheel_path, 'w') as new_wheel:
+                  for name in original_wheel.namelist():
+                      if name != target_inside_wheel:
+                          new_wheel.writestr(name, original_wheel.read(name))
+                  new_wheel.write(dll_path, arcname=target_inside_wheel)
+
+          tmp_wheel_path.replace(wheel_path)
+          print(f"✅ Wheel updated in-place: {wheel_path}")
+          '@
+          Set-Content inject_dll.py $script
+
+      - name: Inject DLL into wheel
+        run: python inject_dll.py
+
   release:
     needs:
       - build
