@@ -14,7 +14,7 @@
   - [x] dbnet
   - [x] none
   - [ ] ctd
-  - [~] [paddle](https://github.com/mg-chao/paddle-ocr-rs)
+  - [x] [paddle](https://github.com/mg-chao/paddle-ocr-rs)
   - [x] dbnet_convnext
   - [ ] python-module
   - [ ] ~~craft~~
@@ -53,9 +53,9 @@
 - [ ] more benchmarks
 - [ ] cleanup code
 - [ ] optimize code
-- [ ] error handling
+- [~] error handling
 - [ ] replace clipper2
-- [ ] replace opencv
+- [~] replace opencv
 - [x] ci
   - [x] cargo build
   - [x] gh publish

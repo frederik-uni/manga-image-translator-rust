@@ -1,6 +1,6 @@
 [project]
 name = "rusty-manga-image-translator"
-version = "0.1.3"
+version = "0.2.1"
 description = "Rust implementation of manga-image-translator with py-bindings"
 readme = "README.md"
 requires-python = ">=3.9"
