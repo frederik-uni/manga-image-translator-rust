@@ -1,0 +1,64 @@
+body {
+    margin: 0;
+    padding: 0;
+    max-width: 1000px;
+    width: 100vw;
+    margin: 0 auto;
+    box-sizing: border-box;
+    background: #f0f0f0;
+}
+
+.canvas-wrapper {
+    width: 100%;
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1em;
+}
+
+.canvas-wrapper > img {
+    width: 100%;
+}
+
+#base-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+.text-box {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    background-color: white;
+    letter-spacing: var(--letter-spacing);
+    line-height: var(--line-height);
+    border-radius: 8px;
+    pointer-events: all;
+    word-break: break-all;
+    white-space: normal;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    text-shadow:
+        calc(1.5px * 1) calc(1.5px * 0) 0 var(--text-shadow),
+        calc(1.5px * 0.924) calc(1.5px * 0.383) 0 var(--text-shadow),
+        calc(1.5px * 0.707) calc(1.5px * 0.707) 0 var(--text-shadow),
+        calc(1.5px * 0.383) calc(1.5px * 0.924) 0 var(--text-shadow),
+        calc(1.5px * 0) calc(1.5px * 1) 0 var(--text-shadow),
+        calc(1.5px * -0.383) calc(1.5px * 0.924) 0 var(--text-shadow),
+        calc(1.5px * -0.707) calc(1.5px * 0.707) 0 var(--text-shadow),
+        calc(1.5px * -0.924) calc(1.5px * 0.3827) 0 var(--text-shadow),
+        calc(1.5px * -1) calc(1.5px * 0) 0 var(--text-shadow),
+        calc(1.5px * -0.924) calc(1.5px * -0.383) 0 var(--text-shadow),
+        calc(1.5px * -0.707) calc(1.5px * -0.707) 0 var(--text-shadow),
+        calc(1.5px * -0.383) calc(1.5px * -0.924) 0 var(--text-shadow),
+        calc(1.5px * 0) calc(1.5px * -1) 0 var(--text-shadow),
+        calc(1.5px * 0.383) calc(1.5px * -0.924) 0 var(--text-shadow),
+        calc(1.5px * 0.707) calc(1.5px * -0.707) 0 var(--text-shadow),
+        calc(1.5px * 0.924) calc(1.5px * -0.383) 0 var(--text-shadow);
+    z-index: 9999;
+    font-family: var(--ui-font-family);
+    color: var(--text-color);
+    overflow-wrap: break-word;
+}

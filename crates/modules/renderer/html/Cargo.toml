@@ -1,0 +1,10 @@
+[package]
+name = "html"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+
+v_htmlescape = "0.15.8"
+binary.workspace = true
+interface.workspace = true
