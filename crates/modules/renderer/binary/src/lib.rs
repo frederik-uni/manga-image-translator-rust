@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use interface::image::RawImage;
+
 #[derive(Clone)]
 pub struct Output {
     pub imgs: Vec<OutputImage>,
@@ -75,11 +77,11 @@ pub struct OutputElement {
     pub width: u32,
     pub height: u32,
     pub rotation: u32,
-    pub fg: (u32, u32, u32),
-    pub bg: (u32, u32, u32),
+    pub fg: (u8, u8, u8),
+    pub bg: (u8, u8, u8),
     pub output_key: String,
     pub translations: HashMap<String, String>,
-    pub background: Vec<u8>,
+    pub background: RawImage,
 }
 
 impl OutputElement {
@@ -142,6 +144,13 @@ impl OutputElement {
             }};
         }
 
+        macro_rules! take_u8 {
+            () => {{
+                let raw = take_bytes!(1);
+                u8::from_le_bytes(raw.try_into().unwrap())
+            }};
+        }
+
         macro_rules! take_usize {
             () => {{
                 let size = std::mem::size_of::<usize>();
@@ -165,12 +174,12 @@ impl OutputElement {
         let width = take_u32!();
         let height = take_u32!();
         let rotation = take_u32!();
-        let fg_0 = take_u32!();
-        let fg_1 = take_u32!();
-        let bg_0 = take_u32!();
-        let bg_1 = take_u32!();
-        let fg_2 = take_u32!();
-        let bg_2 = take_u32!();
+        let fg_0 = take_u8!();
+        let fg_1 = take_u8!();
+        let bg_0 = take_u8!();
+        let bg_1 = take_u8!();
+        let fg_2 = take_u8!();
+        let bg_2 = take_u8!();
         let output_key = take_string!();
 
         let translations_len = take_usize!();
