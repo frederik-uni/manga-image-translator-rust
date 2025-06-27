@@ -167,14 +167,33 @@ jobs:
             size = len(dll_data)
 
           with WheelFile(wheel_path, 'r') as original_wheel:
-            with WheelFile(tmp_wheel_path, 'w') as new_wheel:
-              for name in original_wheel.namelist():
-                if name != target_inside_wheel:
-                  new_wheel.writestr(name, original_wheel.read(name))
-              new_wheel.write(dll_path, arcname=target_inside_wheel)
-              record_line = f"{target_inside_wheel},sha256={digest_b64},{size}\n"
-              if 'rusty_manga_image_translator-*.dist-info/RECORD' in original_wheel.namelist():
-                raise NotImplementedError("Automatic RECORD patching not yet handled")
+              with WheelFile(tmp_wheel_path, 'w') as new_wheel:
+                  record_pattern = 'rusty_manga_image_translator-*.dist-info/RECORD'
+                  record_name = None
+                  for name in original_wheel.namelist():
+                      if fnmatch.fnmatch(name, record_pattern):
+                          record_name = name
+                          break
+
+                  for name in original_wheel.namelist():
+                      if name != target_inside_wheel:
+                          new_wheel.writestr(name, original_wheel.read(name))
+
+                  new_wheel.write(dll_path, arcname=target_inside_wheel)
+
+                  if record_name:
+                      record_content = original_wheel.read(record_name).decode('utf-8')
+                      lines = record_content.splitlines()
+
+                      if lines and not lines[-1].strip():
+                          lines.insert(-1, record_line.strip())
+                      else:
+                          lines.append(record_line.strip())
+
+                      new_record_content = '\n'.join(lines) + '\n'
+                      new_wheel.writestr(record_name, new_record_content)
+                  else:
+                      raise NotImplementedError("RECORD file not found")
 
           tmp_wheel_path.replace(wheel_path)
           print(f"Wheel updated in-place: {wheel_path}")
