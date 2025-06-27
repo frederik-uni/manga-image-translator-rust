@@ -131,6 +131,7 @@ jobs:
           import re
           import hashlib
           import base64
+          import fnmatch
 
           # === Locate DLL ===
           dll_dir = Path("C:/tools/opencv")
