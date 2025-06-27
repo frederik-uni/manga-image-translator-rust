@@ -185,7 +185,7 @@ jobs:
                   if record_name:
                       record_content = original_wheel.read(record_name).decode('utf-8')
                       lines = record_content.splitlines()
-
+                      record_line = f"{target_inside_wheel},sha256={digest_b64},{size}";
                       if lines and not lines[-1].strip():
                           lines.insert(-1, record_line.strip())
                       else:
